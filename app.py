@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from fuzzywuzzy import fuzz
 import requests
+from urllib.parse import quote
 
 # Load responses
 try:
@@ -15,11 +16,11 @@ except Exception as e:
 
 app = FastAPI()
 
-# CORS middleware
+# CORS middleware - adjust the origin to your frontend URL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or ["https://your-username.github.io"]
-    allow_credentials=True,
+    allow_origins=["*"],  # Replace "*" with "https://your-username.github.io" for stricter security
+    allow_credentials=False,  # False avoids conflict with "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -27,6 +28,10 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {"message": "✅ Voice Assistant API is running"}
+
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
 
 @app.get("/ask")
 def ask(question: str = Query(...)):
@@ -36,21 +41,26 @@ def ask(question: str = Query(...)):
 
     # Fuzzy matching
     for intent, data in responses.items():
-        for q in data["question"]:
+        for q in data.get("question", []):
             score = fuzz.ratio(question, q.lower())
             if score > best_score:
                 best_score = score
                 best_match = intent
 
-    if best_match and best_score > 60:
-        answer = responses[best_match]["answer"]
+    # Debug log
+    print(f"[DEBUG] Best match: {best_match}, Score: {best_score}")
 
-        if answer == "TIME":
+    if best_match and best_score > 60:
+        answer = responses[best_match].get("answer", "Sorry, I don't understand that.")
+
+        # Time request
+        if answer.upper() == "TIME":
             return {"answer": datetime.now().strftime("%H:%M:%S")}
-        elif answer == "WIKIPEDIA":
-            # Wikipedia API
+
+        # Wikipedia request
+        elif answer.upper() == "WIKIPEDIA":
             query = question.replace("tell me about", "").strip()
-            url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + query.replace(" ", "_")
+            url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
             try:
                 resp = requests.get(url, timeout=5)
                 if resp.status_code == 200:
@@ -58,8 +68,10 @@ def ask(question: str = Query(...)):
                     return {"answer": data.get("extract", "No summary found.")}
                 else:
                     return {"answer": "I couldn't find anything on Wikipedia."}
-            except:
+            except requests.exceptions.RequestException:
                 return {"answer": "Sorry, there was an error accessing Wikipedia."}
+
+        # Default static response
         else:
             return {"answer": answer}
 
