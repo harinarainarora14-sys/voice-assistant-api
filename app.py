@@ -1,20 +1,23 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
-import requests
 from datetime import datetime
 from fuzzywuzzy import fuzz
 
 # Load responses.json
-with open("responses.json", "r") as f:
-    responses = json.load(f)
+try:
+    with open("responses.json", "r") as f:
+        responses = json.load(f)
+except Exception as e:
+    print("⚠️ Error loading responses.json:", e)
+    responses = {}
 
 app = FastAPI()
 
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,7 +25,7 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"message": "Voice Assistant API running"}
+    return {"message": "✅ Voice Assistant API is running"}
 
 @app.get("/ask")
 def ask(question: str = Query(...)):
@@ -37,24 +40,10 @@ def ask(question: str = Query(...)):
                 best_score = score
                 best_match = intent
 
-    if best_match and best_score > 60:
+    if best_match and best_score > 50:
         answer = responses[best_match]["answer"]
-
         if answer == "TIME":
             return {"answer": datetime.now().strftime("%H:%M:%S")}
-
-        elif answer == "WIKIPEDIA":
-            try:
-                query = question.replace("tell me about", "").strip()
-                url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
-                r = requests.get(url, timeout=5)
-                if r.status_code == 200:
-                    data = r.json()
-                    return {"answer": data.get("extract", "No summary found.")}
-                else:
-                    return {"answer": "I couldn't find anything on Wikipedia."}
-            except:
-                return {"answer": "Sorry, error accessing Wikipedia."}
         else:
             return {"answer": answer}
 
