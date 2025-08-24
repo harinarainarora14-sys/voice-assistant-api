@@ -26,8 +26,8 @@
   }
 
   .bubble {
-    margin: 8px 0;
-    padding: 12px 18px;
+    margin: 6px 0;
+    padding: 12px 16px;
     border-radius: 18px;
     max-width: 75%;
     word-wrap: break-word;
@@ -59,6 +59,9 @@
     background: #1a1a1a;
     border-top: 1px solid #333;
     align-items: center;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
   }
 
   #input-bar input {
@@ -85,6 +88,7 @@
     color: #fff;
     cursor: pointer;
     transition: all 0.2s ease;
+    white-space: nowrap;
   }
 
   #input-bar button:hover {
@@ -93,9 +97,9 @@
   }
 
   @media (max-width: 480px) {
-    .bubble { font-size: 14px; padding: 10px 14px; }
+    .bubble { font-size: 14px; padding: 10px 12px; }
     #input-bar input { font-size: 14px; }
-    #input-bar button { font-size: 14px; padding: 10px 12px; }
+    #input-bar button { font-size: 14px; padding: 10px 10px; }
   }
 </style>
 </head>
@@ -112,8 +116,8 @@
 
 <script>
 let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
-let voiceEnabled = true; // microphone toggle
-let speechEnabled = true; // speaker toggle
+let voiceEnabled = true; 
+let speechEnabled = true; 
 let mic = null;
 let utter = null;
 let audioUnlocked = false;
@@ -137,23 +141,48 @@ function addMessage(text, sender) {
   container.scrollTop = container.scrollHeight;
 }
 
+// Convert TIME to 12-hour format hh:mm AM/PM
+function formatTime12Hour() {
+  const now = new Date();
+  let hours = now.getHours();
+  const minutes = now.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  const hh = hours.toString().padStart(2,'0');
+  const mm = minutes.toString().padStart(2,'0');
+  return `${hh}:${mm} ${ampm}`;
+}
+
 // Send message to API
 async function sendMessage() {
   const input = document.getElementById("input");
   const text = input.value.trim();
   if (!text) return;
+
+  stopVoice(); // stop mic when sending
+
   addMessage(text, "user");
   input.value = "";
 
   try {
-    const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
-    const data = await res.json();
-    if (data && data.answer) {
-      addMessage(data.answer, "bot");
-      if (speechEnabled && audioUnlocked) speak(data.answer);
+    let answerText = "";
+
+    // Check if the user asked for time
+    if (text.toLowerCase().includes("time")) {
+      answerText = formatTime12Hour();
     } else {
-      addMessage("No answer received from API", "bot");
+      const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
+      const data = await res.json();
+      if (data && data.answer) {
+        answerText = data.answer;
+      } else {
+        answerText = "No answer received from API";
+      }
     }
+
+    addMessage(answerText, "bot");
+    if (speechEnabled && audioUnlocked) speak(answerText);
   } catch (err) {
     console.error(err);
     addMessage("Error connecting to API", "bot");
@@ -184,9 +213,23 @@ function startVoice() {
     };
 
     mic.onerror = e => console.error(e);
+
+    mic.onend = () => {
+      mic = null; // reset mic after stop
+    };
   }
 
   mic.start();
+}
+
+// Stop voice recognition
+function stopVoice() {
+  if(mic) {
+    mic.onresult = null;
+    mic.onerror = null;
+    mic.stop();
+    mic = null;
+  }
 }
 
 // Toggle voice input
@@ -208,7 +251,7 @@ function speak(text) {
   speechSynthesis.speak(utter);
 }
 
-// Automatically start voice recognition if enabled
+// Automatically start voice recognition when focusing input
 document.getElementById("input").addEventListener("focus", () => {
   if (voiceEnabled) startVoice();
 });
