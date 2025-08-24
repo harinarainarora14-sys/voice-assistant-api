@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Voice Assistant</title>
 <style>
-  /* Basic reset */
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
+  html, body {
+    height: 100%;
+    width: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #0a0a0a;
     color: #fff;
     display: flex;
     flex-direction: column;
-    height: 100vh;
     overflow: hidden;
   }
 
@@ -29,11 +29,11 @@
 
   .bubble {
     margin: 6px 0;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-radius: 18px;
     max-width: 80%;
     word-wrap: break-word;
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.4;
     transition: all 0.2s ease;
   }
@@ -67,7 +67,7 @@
   #input-bar input {
     flex: 1 1 100%;
     padding: 10px;
-    font-size: 16px;
+    font-size: 1rem;
     border-radius: 8px;
     border: none;
     background: #222;
@@ -82,14 +82,15 @@
   #input-bar button {
     flex: 1 1 auto;
     padding: 10px 12px;
-    font-size: 14px;
+    font-size: 0.9rem;
     border-radius: 8px;
     border: none;
     background: #0077cc;
     color: #fff;
     cursor: pointer;
+    min-width: 70px;
     transition: all 0.2s ease;
-    min-width: 80px;
+    white-space: nowrap;
   }
 
   #input-bar button:hover {
@@ -97,10 +98,26 @@
     transform: scale(1.05);
   }
 
+  /* Small devices */
   @media (max-width: 480px) {
-    .bubble { font-size: 14px; padding: 8px 10px; max-width: 90%; }
-    #input-bar input { font-size: 14px; }
-    #input-bar button { font-size: 13px; padding: 8px 8px; min-width: 70px; }
+    .bubble { font-size: 0.875rem; padding: 8px 10px; max-width: 90%; }
+    #input-bar input { font-size: 0.875rem; }
+    #input-bar button { font-size: 0.8rem; padding: 8px 6px; min-width: 60px; }
+  }
+
+  /* Medium devices */
+  @media (max-width: 768px) {
+    .bubble { max-width: 85%; }
+    #input-bar input { font-size: 0.95rem; }
+  }
+
+  /* Scrollbar styling */
+  #chat-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  #chat-container::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 3px;
   }
 </style>
 </head>
@@ -123,7 +140,7 @@ let mic = null;
 let utter = null;
 let audioUnlocked = false;
 
-// Unlock audio for iOS Safari
+// Unlock audio on first tap for iOS
 document.body.addEventListener("click", () => {
   if (!audioUnlocked) {
     const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
@@ -132,7 +149,6 @@ document.body.addEventListener("click", () => {
   }
 }, {once: true});
 
-// Append messages
 function addMessage(text, sender) {
   const container = document.getElementById("chat-container");
   const msg = document.createElement("div");
@@ -142,7 +158,6 @@ function addMessage(text, sender) {
   container.scrollTop = container.scrollHeight;
 }
 
-// Format time hh:mm AM/PM
 function formatTime12Hour() {
   const now = new Date();
   let hours = now.getHours();
@@ -155,13 +170,12 @@ function formatTime12Hour() {
   return `${hh}:${mm} ${ampm}`;
 }
 
-// Send message
 async function sendMessage() {
   const input = document.getElementById("input");
   const text = input.value.trim();
   if (!text) return;
 
-  stopVoice(); // Stop mic
+  stopVoice();
 
   addMessage(text, "user");
   input.value = "";
@@ -169,17 +183,12 @@ async function sendMessage() {
   try {
     let answerText = "";
 
-    // Check if user asked for time
     if (text.toLowerCase().includes("time")) {
       answerText = formatTime12Hour();
     } else {
       const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
       const data = await res.json();
-      if (data && data.answer) {
-        answerText = data.answer;
-      } else {
-        answerText = "No answer received from API";
-      }
+      answerText = (data && data.answer) ? data.answer : "No answer received from API";
     }
 
     addMessage(answerText, "bot");
@@ -190,37 +199,29 @@ async function sendMessage() {
   }
 }
 
-// Voice recognition
 function startVoice() {
   if (!voiceEnabled) return;
   if (!("webkitSpeechRecognition" in window)) {
     alert("Voice recognition not supported");
     return;
   }
-
   if (!mic) {
     mic = new webkitSpeechRecognition();
     mic.lang = "en-US";
     mic.continuous = false;
     mic.interimResults = false;
 
-    mic.onstart = () => {
-      if (speechSynthesis.speaking) speechSynthesis.cancel();
-    };
-
+    mic.onstart = () => { if (speechSynthesis.speaking) speechSynthesis.cancel(); };
     mic.onresult = e => {
       document.getElementById("input").value = e.results[0][0].transcript;
       sendMessage();
     };
-
     mic.onerror = e => console.error(e);
     mic.onend = () => { mic = null; };
   }
-
   mic.start();
 }
 
-// Stop voice recognition
 function stopVoice() {
   if(mic) {
     mic.onresult = null;
@@ -230,26 +231,22 @@ function stopVoice() {
   }
 }
 
-// Toggle voice
 function toggleVoice() {
   voiceEnabled = !voiceEnabled;
   document.getElementById("voiceToggleBtn").innerText = "Voice: " + (voiceEnabled ? "On" : "Off");
 }
 
-// Toggle speech
 function toggleSpeech() {
   speechEnabled = !speechEnabled;
   document.getElementById("speechToggleBtn").innerText = "Speech: " + (speechEnabled ? "On" : "Off");
 }
 
-// Speak
 function speak(text) {
   if (speechSynthesis.speaking) speechSynthesis.cancel();
   utter = new SpeechSynthesisUtterance(text);
   speechSynthesis.speak(utter);
 }
 
-// Start voice recognition on input focus
 document.getElementById("input").addEventListener("focus", () => {
   if (voiceEnabled) startVoice();
 });
