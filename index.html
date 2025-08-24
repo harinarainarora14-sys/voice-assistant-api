@@ -55,10 +55,8 @@
       input.value = "";
 
       try {
-        console.log("DEBUG: Fetching:", apiBase + "/ask?question=" + encodeURIComponent(text));
         const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text), { method:"GET" });
         const data = await res.json();
-        console.log("DEBUG: API response:", data);
 
         if (data && data.answer) {
           addMessage(data.answer, "bot");
