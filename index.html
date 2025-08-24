@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice Assistant</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; }
+    #chat { max-width:600px; margin:20px auto; background:#fff; border-radius:8px; padding:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+    .bubble { margin:10px; padding:10px; border-radius:10px; max-width:70%; }
+    .user { background:#007bff; color:#fff; margin-left:auto; text-align:right; }
+    .bot { background:#eee; margin-right:auto; text-align:left; }
+    #controls { display:flex; margin-top:10px; }
+    #input { flex:1; padding:10px; }
+    button { margin-left:5px; padding:10px; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <h2>💬 Voice Assistant</h2>
+    <div id="messages"></div>
+    <div id="controls">
+      <input id="input" type="text" placeholder="Ask me something...">
+      <button onclick="sendMessage()">Send</button>
+      <button onclick="startVoice()">🎙️</button>
+      <button onclick="toggleSpeech()">🔊</button>
+      <button onclick="clearChat()">🗑️</button>
+    </div>
+    <p>API URL: <input id="apiUrl" value="https://voice-assistant-api-yya9.onrender.com"> 
+      <button onclick="saveUrl()">Save</button></p>
+  </div>
+
+  <script>
+    let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
+    let speechEnabled = false;
+
+    function saveUrl() {
+      apiBase = document.getElementById("apiUrl").value;
+      localStorage.setItem("apiUrl", apiBase);
+      alert("API URL saved: " + apiBase);
+    }
+
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.className = "bubble " + sender;
+      msg.innerText = text;
+      document.getElementById("messages").appendChild(msg);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("input");
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, "user");
+      input.value = "";
+
+      try {
+        const url = apiBase + "/ask?question=" + encodeURIComponent(text);
+        console.log("DEBUG: Fetching:", url);
+        const res = await fetch(url);  // GET request
+        const data = await res.json();
+        console.log("DEBUG: API response:", data);
+
+        if (data && data.answer) {
+          addMessage(data.answer, "bot");
+          if (speechEnabled) speak(data.answer);
+        } else {
+          addMessage("⚠️ No answer received from API", "bot");
+        }
+      } catch (err) {
+        console.error(err);
+        addMessage("⚠️ Error connecting to API", "bot");
+      }
+    }
+
+    function startVoice() {
+      if (!("webkitSpeechRecognition" in window)) {
+        alert("Voice recognition not supported");
+        return;
+      }
+      const rec = new webkitSpeechRecognition();
+      rec.lang = "en-US";
+      rec.start();
+      rec.onresult = e => {
+        document.getElementById("input").value = e.results[0][0].transcript;
+        sendMessage();
+      };
+    }
+
+    function toggleSpeech() {
+      speechEnabled = !speechEnabled;
+      alert("Speech " + (speechEnabled ? "enabled" : "disabled"));
+    }
+
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utter);
+    }
+
+    function clearChat() {
+      document.getElementById("messages").innerHTML = "";
+    }
+  </script>
+</body>
+</html>
