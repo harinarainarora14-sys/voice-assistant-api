@@ -6,136 +6,120 @@
 <title>Voice Assistant</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0a0a0a;
+    color: #fff;
     margin: 0;
     padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
-  #chat {
-    max-width: 95%;
-    width: 600px;
-    margin: 10px auto;
-    background: #fff;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-  }
-
-  h2 {
-    margin-top: 0;
-    text-align: center;
+  #chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    overflow-y: auto;
+    background: #121212;
   }
 
   .bubble {
-    margin: 8px;
-    padding: 10px 14px;
-    border-radius: 15px;
-    max-width: 80%;
+    margin: 8px 0;
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 75%;
     word-wrap: break-word;
     font-size: 16px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
   }
 
   .user {
-    background: #007bff;
+    background: linear-gradient(45deg, #0077cc, #00aaff);
     color: #fff;
     margin-left: auto;
     text-align: right;
+    box-shadow: 0 4px 10px rgba(0,170,255,0.3);
   }
 
   .bot {
-    background: #eee;
+    background: #222;
+    color: #fff;
     margin-right: auto;
     text-align: left;
+    box-shadow: 0 4px 10px rgba(255,255,255,0.05);
   }
 
-  #controls {
+  #input-bar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
+    gap: 8px;
+    padding: 10px;
+    background: #1a1a1a;
+    border-top: 1px solid #333;
+    align-items: center;
   }
 
-  #input {
-    flex: 1 1 60%;
-    padding: 10px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-  }
-
-  button {
-    flex: 1 1 30%;
-    padding: 10px;
+  #input-bar input {
+    flex: 1;
+    padding: 12px;
     font-size: 16px;
     border-radius: 8px;
     border: none;
-    background: #007bff;
+    background: #222;
+    color: #fff;
+    outline: none;
+  }
+
+  #input-bar input::placeholder {
+    color: #888;
+  }
+
+  #input-bar button {
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    background: #0077cc;
     color: #fff;
     cursor: pointer;
+    transition: all 0.2s ease;
   }
 
-  button:hover {
-    background: #0056b3;
-  }
-
-  #messages {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    background: #fafafa;
-  }
-
-  p {
-    margin-top: 10px;
-    font-size: 14px;
-    text-align: center;
-  }
-
-  input#apiUrl {
-    width: 70%;
-    padding: 6px;
-    font-size: 14px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+  #input-bar button:hover {
+    background: #00aaff;
+    transform: scale(1.05);
   }
 
   @media (max-width: 480px) {
-    .bubble { font-size: 14px; }
-    #input { font-size: 14px; }
-    button { font-size: 14px; flex: 1 1 45%; }
+    .bubble { font-size: 14px; padding: 10px 14px; }
+    #input-bar input { font-size: 14px; }
+    #input-bar button { font-size: 14px; padding: 10px 12px; }
   }
 </style>
 </head>
 <body>
-<div id="chat">
-  <h2>💬 Voice Assistant</h2>
-  <div id="messages"></div>
-  <div id="controls">
-    <input id="input" type="text" placeholder="Ask me something..." onkeydown="if(event.key==='Enter'){sendMessage();}">
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="startVoice()">🎙️</button>
-    <button onclick="toggleSpeech()">🔊</button>
-  </div>
-  <p>
-    API URL: <input id="apiUrl" value="https://voice-assistant-api-yya9.onrender.com"> 
-    <button onclick="saveUrl()">Save</button>
-  </p>
+
+<div id="chat-container"></div>
+
+<div id="input-bar">
+  <input id="input" type="text" placeholder="Type your message..." onkeydown="if(event.key==='Enter'){sendMessage();}">
+  <button onclick="sendMessage()">Send</button>
+  <button id="voiceToggleBtn" onclick="toggleVoice()">Voice: On</button>
+  <button id="speechToggleBtn" onclick="toggleSpeech()">Speech: On</button>
 </div>
 
 <script>
-let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
-// ✅ Enable speech by default
-let speechEnabled = true;
+let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
+let voiceEnabled = true; // microphone toggle
+let speechEnabled = true; // speaker toggle
 let mic = null;
 let utter = null;
-// ✅ iOS audio unlock flag
 let audioUnlocked = false;
 
-// Unlock audio on first user interaction (iOS Safari requirement)
-document.getElementById("chat").addEventListener("click", () => {
+// Unlock audio for iOS Safari
+document.body.addEventListener("click", () => {
   if (!audioUnlocked) {
     const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
     speechSynthesis.speak(unlockUtter);
@@ -143,20 +127,17 @@ document.getElementById("chat").addEventListener("click", () => {
   }
 }, {once: true});
 
-function saveUrl() {
-  apiBase = document.getElementById("apiUrl").value;
-  localStorage.setItem("apiUrl", apiBase);
-  alert("API URL saved: " + apiBase);
-}
-
+// Chat message append
 function addMessage(text, sender) {
+  const container = document.getElementById("chat-container");
   const msg = document.createElement("div");
   msg.className = "bubble " + sender;
   msg.innerText = text;
-  document.getElementById("messages").appendChild(msg);
-  document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
 }
 
+// Send message to API
 async function sendMessage() {
   const input = document.getElementById("input");
   const text = input.value.trim();
@@ -171,15 +152,17 @@ async function sendMessage() {
       addMessage(data.answer, "bot");
       if (speechEnabled && audioUnlocked) speak(data.answer);
     } else {
-      addMessage("⚠️ No answer received from API", "bot");
+      addMessage("No answer received from API", "bot");
     }
   } catch (err) {
     console.error(err);
-    addMessage("⚠️ Error connecting to API", "bot");
+    addMessage("Error connecting to API", "bot");
   }
 }
 
+// Voice recognition
 function startVoice() {
+  if (!voiceEnabled) return;
   if (!("webkitSpeechRecognition" in window)) {
     alert("Voice recognition not supported");
     return;
@@ -206,16 +189,29 @@ function startVoice() {
   mic.start();
 }
 
-function toggleSpeech() {
-  speechEnabled = !speechEnabled;
-  alert("Speech " + (speechEnabled ? "enabled" : "disabled"));
+// Toggle voice input
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  document.getElementById("voiceToggleBtn").innerText = "Voice: " + (voiceEnabled ? "On" : "Off");
 }
 
+// Toggle speech output
+function toggleSpeech() {
+  speechEnabled = !speechEnabled;
+  document.getElementById("speechToggleBtn").innerText = "Speech: " + (speechEnabled ? "On" : "Off");
+}
+
+// Speak function
 function speak(text) {
   if (speechSynthesis.speaking) speechSynthesis.cancel();
   utter = new SpeechSynthesisUtterance(text);
   speechSynthesis.speak(utter);
 }
+
+// Automatically start voice recognition if enabled
+document.getElementById("input").addEventListener("focus", () => {
+  if (voiceEnabled) startVoice();
+});
 </script>
 </body>
 </html>
