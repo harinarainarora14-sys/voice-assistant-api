@@ -16,11 +16,11 @@ except Exception as e:
 
 app = FastAPI()
 
-# CORS middleware - adjust the origin to your frontend URL
+# CORS middleware - allow your frontend (GitHub Pages or others)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with "https://your-username.github.io" for stricter security
-    allow_credentials=False,  # False avoids conflict with "*"
+    allow_origins=["*"],  # You can replace "*" with your frontend URL for security
+    allow_credentials=False,  # Must be False when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
