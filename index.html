@@ -23,9 +23,8 @@
       <button onclick="sendMessage()">Send</button>
       <button onclick="startVoice()">🎙️</button>
       <button onclick="toggleSpeech()">🔊</button>
-      <button onclick="clearChat()">🗑️</button>
     </div>
-    <p>API URL: <input id="apiUrl" value="https://voice-assistant-api-yya9.onrender.com"> 
+    <p>API URL: <input id="apiUrl" value="https://your-render-url.onrender.com"> 
       <button onclick="saveUrl()">Save</button></p>
   </div>
 
@@ -55,9 +54,8 @@
       input.value = "";
 
       try {
-        const url = apiBase + "/ask?question=" + encodeURIComponent(text);
-        console.log("DEBUG: Fetching:", url);
-        const res = await fetch(url);  // GET request
+        console.log("DEBUG: Fetching:", apiBase + "/ask?question=" + encodeURIComponent(text));
+        const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
         const data = await res.json();
         console.log("DEBUG: API response:", data);
 
@@ -95,10 +93,6 @@
     function speak(text) {
       const utter = new SpeechSynthesisUtterance(text);
       speechSynthesis.speak(utter);
-    }
-
-    function clearChat() {
-      document.getElementById("messages").innerHTML = "";
     }
   </script>
 </body>
