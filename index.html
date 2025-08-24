@@ -24,10 +24,8 @@
       <button onclick="startVoice()">🎙️</button>
       <button onclick="toggleSpeech()">🔊</button>
     </div>
-    <p>
-      API URL: <input id="apiUrl" value="https://voice-assistant-api.onrender.com"> 
-      <button onclick="saveUrl()">Save</button>
-    </p>
+    <p>API URL: <input id="apiUrl" value="https://your-render-api.onrender.com"> 
+      <button onclick="saveUrl()">Save</button></p>
   </div>
 
   <script>
@@ -57,8 +55,11 @@
       input.value = "";
 
       try {
-        const res = await fetch(`${apiBase}/ask?question=${encodeURIComponent(text)}`, { method: "GET" });
+        console.log("DEBUG: Fetching:", apiBase + "/ask?question=" + encodeURIComponent(text));
+        const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text), { method:"GET" });
         const data = await res.json();
+        console.log("DEBUG: API response:", data);
+
         if (data && data.answer) {
           addMessage(data.answer, "bot");
           if (speechEnabled) speak(data.answer);
@@ -71,23 +72,24 @@
       }
     }
 
+    document.getElementById("input").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") sendMessage();
+    });
+
     function startVoice() {
       if (!("webkitSpeechRecognition" in window)) {
         alert("Voice recognition not supported");
         return;
       }
-
       if (!mic) {
         mic = new webkitSpeechRecognition();
         mic.lang = "en-US";
         mic.continuous = false;
         mic.interimResults = false;
-
         mic.onresult = e => {
           document.getElementById("input").value = e.results[0][0].transcript;
           sendMessage();
         };
-
         mic.onerror = e => console.error(e);
       }
       mic.start();
@@ -99,14 +101,9 @@
     }
 
     function speak(text) {
-      if (!speechEnabled) return;
       const utter = new SpeechSynthesisUtterance(text);
       speechSynthesis.speak(utter);
     }
-
-    document.getElementById("input").addEventListener("keyup", function(event) {
-      if (event.key === "Enter") sendMessage();
-    });
   </script>
 </body>
 </html>
