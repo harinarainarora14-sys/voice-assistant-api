@@ -127,7 +127,8 @@
 
 <script>
 let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
-let speechEnabled = false;
+// ✅ Enable speech by default
+let speechEnabled = true;
 let mic = null;
 let utter = null;
 
