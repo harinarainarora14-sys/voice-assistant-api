@@ -15,7 +15,7 @@ except Exception as e:
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS for all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,7 +34,7 @@ def ask(question: str = Query(...)):
     best_match = None
     best_score = 0
 
-    # Fuzzy match
+    # Fuzzy match with responses.json
     for intent, data in responses.items():
         for q in data.get("question", []):
             score = fuzz.ratio(question_lower, q.lower())
@@ -42,6 +42,7 @@ def ask(question: str = Query(...)):
                 best_score = score
                 best_match = intent
 
+    # If a match is found
     if best_match and best_score > 60:
         answer = responses[best_match]["answer"]
 
@@ -49,9 +50,12 @@ def ask(question: str = Query(...)):
         if answer == "TIME":
             return {"answer": datetime.now().strftime("%H:%M:%S")}
 
-        # Wikipedia query
-        elif answer == "WIKIPEDIA":
-            query = question_lower.replace("wikipedia", "").strip()
+        # Wikipedia queries
+        elif answer == "WIKIPEDIA" or "tell me about" in question_lower:
+            query = question_lower
+            for prefix in ["tell me about", "who is", "what is"]:
+                if query.startswith(prefix):
+                    query = query.replace(prefix, "").strip()
             if not query:
                 return {"answer": "Please tell me what to search on Wikipedia."}
             try:
@@ -65,9 +69,9 @@ def ask(question: str = Query(...)):
             except Exception:
                 return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
-        # Predefined answer
+        # Other predefined responses
         else:
             return {"answer": answer}
 
-    # No match fallback
+    # Fallback if no match
     return {"answer": f"Sorry, I don't understand '{question}'."}
