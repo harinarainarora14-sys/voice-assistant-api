@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
 from fuzzywuzzy import fuzz
-import pyttsx3
 
 # === Load responses.json ===
 try:
@@ -12,10 +11,6 @@ try:
 except Exception as e:
     print("⚠️ Error loading responses.json:", e)
     responses = {}
-
-# === Initialize TTS engine (optional, works locally) ===
-tts_engine = pyttsx3.init()
-tts_engine.setProperty('rate', 170)
 
 app = FastAPI()
 
@@ -60,13 +55,6 @@ def ask(question: str = Query(...)):
             answer_text = answer
     else:
         answer_text = f"Sorry, I don't understand '{question}'."
-
-    # === Optional: server-side TTS ===
-    try:
-        tts_engine.say(answer_text)
-        tts_engine.runAndWait()
-    except Exception as e:
-        print("⚠️ TTS error:", e)
 
     # === Return conversation-style JSON ===
     return {
