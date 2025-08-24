@@ -4,18 +4,14 @@
   <meta charset="UTF-8">
   <title>Voice Assistant</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f5f5f5; }
-    #chat { max-width:600px; margin:20px auto; background:#fff; border-radius:8px; padding:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-    .bubble { margin:10px; padding:10px; border-radius:10px; max-width:70%; }
-    .user { background:#007bff; color:#fff; margin-left:auto; text-align:right; }
-    .bot { background:#eee; margin-right:auto; text-align:left; }
-    #controls { display:flex; margin-top:10px; }
-    #input { flex:1; padding:10px; }
-    button { margin-left:5px; padding:10px; }
-    @media screen and (max-width:600px) {
-      #chat { width:95%; padding:10px; }
-      .bubble { max-width:90%; }
-    }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; }
+    #chat { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .bubble { margin: 10px; padding: 10px; border-radius: 10px; max-width: 70%; }
+    .user { background: #007bff; color: #fff; margin-left: auto; text-align: right; }
+    .bot { background: #eee; margin-right: auto; text-align: left; }
+    #controls { display: flex; margin-top: 10px; }
+    #input { flex: 1; padding: 10px; }
+    button { margin-left: 5px; padding: 10px; }
   </style>
 </head>
 <body>
@@ -28,13 +24,16 @@
       <button onclick="startVoice()">🎙️</button>
       <button onclick="toggleSpeech()">🔊</button>
     </div>
-    <p>API URL: <input id="apiUrl" value="https://voice-assistant-api.onrender.com"> 
-      <button onclick="saveUrl()">Save</button></p>
+    <p>
+      API URL: <input id="apiUrl" value="https://voice-assistant-api.onrender.com"> 
+      <button onclick="saveUrl()">Save</button>
+    </p>
   </div>
 
   <script>
     let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
     let speechEnabled = false;
+    let mic = null;
 
     function saveUrl() {
       apiBase = document.getElementById("apiUrl").value;
@@ -51,18 +50,15 @@
     }
 
     async function sendMessage() {
-      const inputEl = document.getElementById("input");
-      const text = inputEl.value.trim();
+      const input = document.getElementById("input");
+      const text = input.value.trim();
       if (!text) return;
       addMessage(text, "user");
-      inputEl.value = "";
+      input.value = "";
 
       try {
-        console.log("DEBUG: Fetching:", apiBase + "/ask?question=" + encodeURIComponent(text));
-        const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
+        const res = await fetch(`${apiBase}/ask?question=${encodeURIComponent(text)}`, { method: "GET" });
         const data = await res.json();
-        console.log("DEBUG: API response:", data);
-
         if (data && data.answer) {
           addMessage(data.answer, "bot");
           if (speechEnabled) speak(data.answer);
@@ -75,23 +71,26 @@
       }
     }
 
-    // Trigger sendMessage on Enter key
-    document.getElementById("input").addEventListener("keypress", function(e) {
-      if (e.key === "Enter") sendMessage();
-    });
-
     function startVoice() {
       if (!("webkitSpeechRecognition" in window)) {
         alert("Voice recognition not supported");
         return;
       }
-      const rec = new webkitSpeechRecognition();
-      rec.lang = "en-US";
-      rec.start();
-      rec.onresult = e => {
-        document.getElementById("input").value = e.results[0][0].transcript;
-        sendMessage();
-      };
+
+      if (!mic) {
+        mic = new webkitSpeechRecognition();
+        mic.lang = "en-US";
+        mic.continuous = false;
+        mic.interimResults = false;
+
+        mic.onresult = e => {
+          document.getElementById("input").value = e.results[0][0].transcript;
+          sendMessage();
+        };
+
+        mic.onerror = e => console.error(e);
+      }
+      mic.start();
     }
 
     function toggleSpeech() {
@@ -100,9 +99,15 @@
     }
 
     function speak(text) {
+      if (!speechEnabled) return;
       const utter = new SpeechSynthesisUtterance(text);
       speechSynthesis.speak(utter);
     }
+
+    // Allow sending message via Enter key
+    document.getElementById("input").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") sendMessage();
+    });
   </script>
 </body>
 </html>
