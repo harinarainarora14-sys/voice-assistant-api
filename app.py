@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import requests
 from datetime import datetime
 from fuzzywuzzy import fuzz
 
@@ -10,10 +11,10 @@ with open("responses.json", "r") as f:
 
 app = FastAPI()
 
-# Enable CORS so HTML can call API
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,7 +22,7 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"message": "Voice Assistant API is running"}
+    return {"message": "Voice Assistant API running"}
 
 @app.get("/ask")
 def ask(question: str = Query(...)):
@@ -29,9 +30,8 @@ def ask(question: str = Query(...)):
     best_match = None
     best_score = 0
 
-    # Find best match
     for intent, data in responses.items():
-        for q in data.get("question", []):
+        for q in data["question"]:
             score = fuzz.ratio(question, q.lower())
             if score > best_score:
                 best_score = score
@@ -39,8 +39,22 @@ def ask(question: str = Query(...)):
 
     if best_match and best_score > 60:
         answer = responses[best_match]["answer"]
+
         if answer == "TIME":
             return {"answer": datetime.now().strftime("%H:%M:%S")}
+
+        elif answer == "WIKIPEDIA":
+            try:
+                query = question.replace("tell me about", "").strip()
+                url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
+                r = requests.get(url, timeout=5)
+                if r.status_code == 200:
+                    data = r.json()
+                    return {"answer": data.get("extract", "No summary found.")}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            except:
+                return {"answer": "Sorry, error accessing Wikipedia."}
         else:
             return {"answer": answer}
 
