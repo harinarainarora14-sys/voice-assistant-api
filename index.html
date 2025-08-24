@@ -1,107 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Voice Assistant</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f5f5f5; }
-    #chat { max-width:600px; margin:20px auto; background:#fff; border-radius:8px; padding:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-    .bubble { margin:10px; padding:10px; border-radius:10px; max-width:70%; }
-    .user { background:#007bff; color:#fff; margin-left:auto; text-align:right; }
-    .bot { background:#eee; margin-right:auto; text-align:left; }
-    #controls { display:flex; margin-top:10px; }
-    #input { flex:1; padding:10px; }
-    button { margin-left:5px; padding:10px; }
-  </style>
+<meta charset="UTF-8">
+<title>Voice Assistant</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f5f5f5; }
+  #chat { max-width:600px; margin:20px auto; background:#fff; border-radius:8px; padding:15px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+  .bubble { margin:10px; padding:10px; border-radius:10px; max-width:70%; }
+  .user { background:#007bff; color:#fff; margin-left:auto; text-align:right; }
+  .bot { background:#eee; margin-right:auto; text-align:left; }
+  #controls { display:flex; margin-top:10px; }
+  #input { flex:1; padding:10px; }
+  button { margin-left:5px; padding:10px; }
+</style>
 </head>
 <body>
-  <div id="chat">
-    <h2>💬 Voice Assistant</h2>
-    <div id="messages"></div>
-    <div id="controls">
-      <input id="input" type="text" placeholder="Ask me something...">
-      <button onclick="sendMessage()">Send</button>
-      <button onclick="startVoice()">🎙️</button>
-      <button onclick="toggleSpeech()">🔊</button>
-    </div>
-    <p>API URL: <input id="apiUrl" value="https://your-render-api.onrender.com"> 
-      <button onclick="saveUrl()">Save</button></p>
+<div id="chat">
+  <h2>💬 Voice Assistant</h2>
+  <div id="messages"></div>
+  <div id="controls">
+    <input id="input" type="text" placeholder="Ask me something..." onkeydown="if(event.key==='Enter'){sendMessage();}">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="startVoice()">🎙️</button>
+    <button onclick="toggleSpeech()">🔊</button>
   </div>
+  <p>API URL: <input id="apiUrl" value="https://voice-assistant-api.onrender.com"> 
+    <button onclick="saveUrl()">Save</button></p>
+</div>
 
-  <script>
-    let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
-    let speechEnabled = false;
-    let mic = null;
+<script>
+let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl").value;
+let speechEnabled = false;
+let mic = null;
+let utter = null;
 
-    function saveUrl() {
-      apiBase = document.getElementById("apiUrl").value;
-      localStorage.setItem("apiUrl", apiBase);
-      alert("API URL saved: " + apiBase);
+function saveUrl() {
+  apiBase = document.getElementById("apiUrl").value;
+  localStorage.setItem("apiUrl", apiBase);
+  alert("API URL saved: " + apiBase);
+}
+
+function addMessage(text, sender) {
+  const msg = document.createElement("div");
+  msg.className = "bubble " + sender;
+  msg.innerText = text;
+  document.getElementById("messages").appendChild(msg);
+  document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById("input");
+  const text = input.value.trim();
+  if (!text) return;
+  addMessage(text, "user");
+  input.value = "";
+
+  try {
+    const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
+    const data = await res.json();
+    if (data && data.answer) {
+      addMessage(data.answer, "bot");
+      if (speechEnabled) speak(data.answer);
+    } else {
+      addMessage("⚠️ No answer received from API", "bot");
     }
+  } catch (err) {
+    console.error(err);
+    addMessage("⚠️ Error connecting to API", "bot");
+  }
+}
 
-    function addMessage(text, sender) {
-      const msg = document.createElement("div");
-      msg.className = "bubble " + sender;
-      msg.innerText = text;
-      document.getElementById("messages").appendChild(msg);
-      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
-    }
+function startVoice() {
+  if (!("webkitSpeechRecognition" in window)) {
+    alert("Voice recognition not supported");
+    return;
+  }
 
-    async function sendMessage() {
-      const input = document.getElementById("input");
-      const text = input.value.trim();
-      if (!text) return;
-      addMessage(text, "user");
-      input.value = "";
+  if (!mic) {
+    mic = new webkitSpeechRecognition();
+    mic.lang = "en-US";
+    mic.continuous = false;
+    mic.interimResults = false;
 
-      try {
-        const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text), { method:"GET" });
-        const data = await res.json();
+    mic.onstart = () => {
+      if (speechSynthesis.speaking) speechSynthesis.cancel();
+    };
 
-        if (data && data.answer) {
-          addMessage(data.answer, "bot");
-          if (speechEnabled) speak(data.answer);
-        } else {
-          addMessage("⚠️ No answer received from API", "bot");
-        }
-      } catch (err) {
-        console.error(err);
-        addMessage("⚠️ Error connecting to API", "bot");
-      }
-    }
+    mic.onresult = e => {
+      document.getElementById("input").value = e.results[0][0].transcript;
+      sendMessage();
+    };
 
-    document.getElementById("input").addEventListener("keyup", function(event) {
-      if (event.key === "Enter") sendMessage();
-    });
+    mic.onerror = e => console.error(e);
+  }
 
-    function startVoice() {
-      if (!("webkitSpeechRecognition" in window)) {
-        alert("Voice recognition not supported");
-        return;
-      }
-      if (!mic) {
-        mic = new webkitSpeechRecognition();
-        mic.lang = "en-US";
-        mic.continuous = false;
-        mic.interimResults = false;
-        mic.onresult = e => {
-          document.getElementById("input").value = e.results[0][0].transcript;
-          sendMessage();
-        };
-        mic.onerror = e => console.error(e);
-      }
-      mic.start();
-    }
+  mic.start();
+}
 
-    function toggleSpeech() {
-      speechEnabled = !speechEnabled;
-      alert("Speech " + (speechEnabled ? "enabled" : "disabled"));
-    }
+function toggleSpeech() {
+  speechEnabled = !speechEnabled;
+  alert("Speech " + (speechEnabled ? "enabled" : "disabled"));
+}
 
-    function speak(text) {
-      const utter = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(utter);
-    }
-  </script>
+function speak(text) {
+  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  utter = new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utter);
+}
+</script>
 </body>
 </html>
