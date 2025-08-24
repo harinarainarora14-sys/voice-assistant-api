@@ -131,6 +131,17 @@ let apiBase = localStorage.getItem("apiUrl") || document.getElementById("apiUrl"
 let speechEnabled = true;
 let mic = null;
 let utter = null;
+// ✅ iOS audio unlock flag
+let audioUnlocked = false;
+
+// Unlock audio on first user interaction (iOS Safari requirement)
+document.getElementById("chat").addEventListener("click", () => {
+  if (!audioUnlocked) {
+    const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
+    speechSynthesis.speak(unlockUtter);
+    audioUnlocked = true;
+  }
+}, {once: true});
 
 function saveUrl() {
   apiBase = document.getElementById("apiUrl").value;
@@ -158,7 +169,7 @@ async function sendMessage() {
     const data = await res.json();
     if (data && data.answer) {
       addMessage(data.answer, "bot");
-      if (speechEnabled) speak(data.answer);
+      if (speechEnabled && audioUnlocked) speak(data.answer);
     } else {
       addMessage("⚠️ No answer received from API", "bot");
     }
