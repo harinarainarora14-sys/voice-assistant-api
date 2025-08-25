@@ -83,11 +83,16 @@ def ask(question: str = Query(...)):
                 query = question[len(kw):].strip()
                 break
 
+        # Format query for Wikipedia API: capitalize words, replace spaces with underscores
+        query = "_".join([w.capitalize() for w in query.split()])
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+
         try:
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
+                if data.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
+                    return {"answer": "I couldn't find anything on Wikipedia."}
                 extract = data.get("extract", "")
                 if extract:
                     return {"answer": extract}
@@ -100,6 +105,7 @@ def ask(question: str = Query(...)):
 
     # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
+
 
 # ------------------------
 # Answer processing
@@ -127,11 +133,16 @@ def process_answer(intent: str, question: str):
                 query = question[len(kw):].strip()
                 break
 
+        # Format query for Wikipedia API: capitalize words, replace spaces with underscores
+        query = "_".join([w.capitalize() for w in query.split()])
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+
         try:
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
+                if data.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
+                    return {"answer": "I couldn't find anything on Wikipedia."}
                 extract = data.get("extract", "")
                 if extract:
                     return {"answer": extract}
@@ -145,3 +156,4 @@ def process_answer(intent: str, question: str):
     # Default static response
     else:
         return {"answer": answer}
+
