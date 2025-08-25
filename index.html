@@ -161,13 +161,14 @@
 </div>
 
 <script>
+let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
 let voiceEnabled = true;
 let speechEnabled = true;
 let mic = null;
 let utter = null;
 let audioUnlocked = false;
 
-// Unlock audio on first tap
+// Unlock audio on first tap for iOS
 document.body.addEventListener("click", () => {
   if (!audioUnlocked) {
     const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
@@ -210,12 +211,15 @@ async function sendMessage() {
 
   try {
     let answerText = "";
+
     if (text.toLowerCase().includes("time")) {
       answerText = formatTime12Hour();
     } else {
-      // Dummy response for testing
-      answerText = "This is a dummy response from the assistant.";
+      const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
+      const data = await res.json();
+      answerText = (data && data.answer) ? data.answer : "No answer received from API";
     }
+
     addMessage(answerText, "bot");
     if (speechEnabled && audioUnlocked) speak(answerText);
   } catch (err) {
