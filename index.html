@@ -55,7 +55,7 @@
     box-shadow: 0 4px 10px rgba(255,255,255,0.05);
   }
 
-  /* Input bar pinned at bottom */
+  /* Input bar pinned at bottom with fixed button sizing */
   #input-bar {
     flex-shrink: 0;
     display: flex;
@@ -69,13 +69,14 @@
 
   #input-bar input {
     flex: 1 1 auto;
-    padding: 12px;
+    padding: 14px 12px;
     font-size: 1rem;
     border-radius: 8px;
     border: none;
     background: #222;
     color: #fff;
     outline: none;
+    min-width: 0;
   }
 
   #input-bar input::placeholder {
@@ -83,15 +84,15 @@
   }
 
   #input-bar button {
-    flex: 1 1 auto;
-    padding: 12px 16px;
-    font-size: 0.95rem;
+    flex-shrink: 0;
+    padding: 14px 18px;
+    font-size: 1rem;
     border-radius: 8px;
     border: none;
     background: #0077cc;
     color: #fff;
     cursor: pointer;
-    min-width: 80px;
+    min-width: 90px;
     transition: all 0.2s ease;
     white-space: nowrap;
   }
@@ -105,7 +106,7 @@
   @media (max-width: 480px) {
     .bubble { font-size: 0.875rem; padding: 8px 10px; max-width: 90%; }
     #input-bar input { font-size: 0.875rem; }
-    #input-bar button { font-size: 0.8rem; padding: 8px 6px; min-width: 60px; }
+    #input-bar button { font-size: 0.875rem; padding: 10px 12px; min-width: 70px; }
   }
 
   /* Medium devices */
@@ -136,22 +137,15 @@
       margin: 6px 0;
     }
 
-    #input-bar {
-      padding: 10px;
-      gap: 8px;
-      flex-wrap: nowrap;
-    }
-
     #input-bar input {
-      flex: 1 1 auto;
       font-size: 1rem;
-      padding: 12px;
+      padding: 14px 12px;
     }
 
     #input-bar button {
-      font-size: 0.95rem;
-      padding: 12px 16px;
-      min-width: 80px;
+      font-size: 1rem;
+      padding: 14px 18px;
+      min-width: 90px;
     }
   }
 
@@ -292,3 +286,7 @@ function speak(text) {
 
 document.getElementById("input").addEventListener("focus", () => {
   if (voiceEnabled) startVoice();
+});
+</script>
+</body>
+</html>
