@@ -3,253 +3,280 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice Assistant</title>
+<title>Voice & Text Assistant</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin:0; padding:0; }
 
-  html, body {
-    height: 100%;
-    width: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #0a0a0a;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #0a0a0a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-  #chat-container {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    padding: 12px;
-    overflow-y: auto;
-    background: #121212;
-  }
+#mode-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  background: #111;
+  border-bottom: 1px solid #333;
+}
 
-  .bubble {
-    margin: 6px 0;
-    padding: 12px 16px;
-    border-radius: 18px;
-    max-width: 80%;
-    word-wrap: break-word;
-    font-size: 1rem;
-    line-height: 1.4;
-    transition: all 0.2s ease;
-  }
+#mode-bar button {
+  flex: 1;
+  padding: 12px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #0077cc;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
 
-  .user {
-    background: linear-gradient(45deg, #0077cc, #00aaff);
-    color: #fff;
-    margin-left: auto;
-    text-align: right;
-    box-shadow: 0 4px 10px rgba(0,170,255,0.3);
-  }
+#mode-bar button.active {
+  background: #00aaff;
+}
 
-  .bot {
-    background: #222;
-    color: #fff;
-    margin-right: auto;
-    text-align: left;
-    box-shadow: 0 4px 10px rgba(255,255,255,0.05);
-  }
+#chat-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow-y: auto;
+  background: #121212;
+}
 
-  #input-bar {
-    flex-shrink: 0;
-    display: flex;
-    gap: 6px;
-    padding: 10px;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-    align-items: center;
-    width: 100%;
-  }
+.bubble {
+  margin: 6px 0;
+  padding: 12px 16px;
+  border-radius: 18px;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 1rem;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
 
-  #input-bar input {
-    flex: 1 1 auto;
-    padding: 14px 12px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: none;
-    background: #222;
-    color: #fff;
-    outline: none;
-    min-width: 0;
-  }
+.user {
+  background: linear-gradient(45deg,#0077cc,#00aaff);
+  color:#fff;
+  margin-left:auto;
+  text-align:right;
+  box-shadow:0 4px 10px rgba(0,170,255,0.3);
+}
 
-  #input-bar input::placeholder {
-    color: #888;
-  }
+.bot {
+  background: #222;
+  color: #fff;
+  margin-right:auto;
+  text-align:left;
+  box-shadow:0 4px 10px rgba(255,255,255,0.05);
+}
 
-  #input-bar button {
-    flex-shrink: 0;
-    padding: 14px 18px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: none;
-    background: #0077cc;
-    color: #fff;
-    cursor: pointer;
-    min-width: 90px;
-    white-space: nowrap;
-  }
+#text-mode, #voice-mode {
+  flex-shrink:0;
+  display: flex;
+  gap:6px;
+  padding:10px;
+  background:#1a1a1a;
+  border-top:1px solid #333;
+  align-items:center;
+}
 
-  #input-bar button:hover {
-    background: #00aaff;
-    transform: scale(1.05);
-  }
+#text-mode input {
+  flex:1 1 auto;
+  padding:14px 12px;
+  font-size:1rem;
+  border-radius:8px;
+  border:none;
+  background:#222;
+  color:#fff;
+  outline:none;
+}
 
-  @media (max-width: 480px) {
-    .bubble { font-size: 0.875rem; padding: 8px 10px; max-width: 90%; }
-    #input-bar input { font-size: 0.875rem; }
-    #input-bar button { font-size: 0.875rem; padding: 10px 12px; min-width: 70px; }
-  }
+#text-mode button, #voice-mode button {
+  flex-shrink:0;
+  padding:14px 18px;
+  font-size:1rem;
+  border-radius:8px;
+  border:none;
+  background:#0077cc;
+  color:#fff;
+  cursor:pointer;
+}
 
-  @media (max-width: 768px) {
-    .bubble { max-width: 85%; }
-    #input-bar input { font-size: 0.95rem; }
-  }
+#text-mode button:hover, #voice-mode button:hover {
+  background:#00aaff;
+  transform:scale(1.05);
+}
 
-  #chat-container::-webkit-scrollbar {
-    width: 6px;
-  }
-  #chat-container::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 3px;
-  }
+#chat-container::-webkit-scrollbar {
+  width:6px;
+}
+#chat-container::-webkit-scrollbar-thumb {
+  background:#555;
+  border-radius:3px;
+}
+
+@media (max-width:480px){
+  .bubble{font-size:0.875rem;padding:8px 10px;max-width:90%;}
+  #text-mode input{font-size:0.875rem;}
+  #text-mode button, #voice-mode button{font-size:0.875rem;padding:10px 12px;min-width:70px;}
+}
+
 </style>
 </head>
 <body>
 
+<div id="mode-bar">
+  <button id="textModeBtn" class="active" onclick="switchMode('text')">Text Mode</button>
+  <button id="voiceModeBtn" onclick="switchMode('voice')">Voice Mode</button>
+</div>
+
 <div id="chat-container"></div>
 
-<div id="input-bar">
-  <input id="input" type="text" placeholder="Type your message..." 
-         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendMessage();}">
-  <button type="button" onclick="sendMessage()">Send</button>
-  <button type="button" id="voiceToggleBtn" onclick="toggleVoice()">Voice: On</button>
-  <button type="button" id="speechToggleBtn" onclick="toggleSpeech()">Speech: On</button>
+<!-- Text Mode -->
+<div id="text-mode">
+  <input id="textInput" type="text" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+  <button onclick="sendTextMessage()">Send</button>
+</div>
+
+<!-- Voice Mode -->
+<div id="voice-mode" style="display:none;">
+  <button onclick="startVoice()">Start Listening</button>
 </div>
 
 <script>
 let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
-let voiceEnabled = true;
 let speechEnabled = true;
 let mic = null;
 let utter = null;
 let audioUnlocked = false;
+let currentMode = 'text';
 
-// Unlock audio on first tap for iOS
+// Unlock audio for iOS
 document.body.addEventListener("click", () => {
   if (!audioUnlocked) {
     const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
     speechSynthesis.speak(unlockUtter);
     audioUnlocked = true;
   }
-}, {once: true});
+}, {once:true});
 
-function addMessage(text, sender) {
+function switchMode(mode){
+  currentMode = mode;
+  document.getElementById('text-mode').style.display = mode==='text'?'flex':'none';
+  document.getElementById('voice-mode').style.display = mode==='voice'?'flex':'none';
+  document.getElementById('textModeBtn').classList.toggle('active', mode==='text');
+  document.getElementById('voiceModeBtn').classList.toggle('active', mode==='voice');
+  stopVoice();
+}
+
+function addMessage(text,sender){
   const container = document.getElementById("chat-container");
   const msg = document.createElement("div");
-  msg.className = "bubble " + sender;
-  msg.innerText = text;
+  msg.className="bubble "+sender;
+  msg.innerText=text;
   container.appendChild(msg);
   container.scrollTop = container.scrollHeight;
 }
 
-function formatTime12Hour() {
-  const now = new Date();
-  let hours = now.getHours();
-  const minutes = now.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-  const hh = hours.toString().padStart(2,'0');
-  const mm = minutes.toString().padStart(2,'0');
-  return `${hh}:${mm} ${ampm}`;
+function formatTime12Hour(){
+  const now=new Date();
+  let hours=now.getHours();
+  const minutes=now.getMinutes();
+  const ampm=hours>=12?'PM':'AM';
+  hours=hours%12;
+  if(hours===0) hours=12;
+  return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')} ${ampm}`;
 }
 
-async function sendMessage() {
-  const input = document.getElementById("input");
-  const text = input.value.trim();
-  if (!text) return;
+async function sendTextMessage(){
+  const input=document.getElementById("textInput");
+  const text=input.value.trim();
+  if(!text) return;
 
-  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  // Stop ongoing speech immediately
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
   stopVoice();
 
-  addMessage(text, "user");
-  input.value = "";
+  addMessage(text,"user");
+  input.value="";
 
-  try {
-    let answerText = "";
-
-    if (text.toLowerCase().includes("time")) {
+  try{
+    let answerText="";
+    if(text.toLowerCase().includes("time")){
       answerText = formatTime12Hour();
     } else {
-      const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
+      const res = await fetch(apiBase + "/ask?question="+encodeURIComponent(text));
       const data = await res.json();
-      answerText = (data && data.answer) ? data.answer : "No answer received from API";
+      answerText = (data && data.answer)? data.answer:"No answer received from API";
     }
-
-    addMessage(answerText, "bot");
-    if (speechEnabled && audioUnlocked) speak(answerText);
-  } catch (err) {
+    addMessage(answerText,"bot");
+    if(audioUnlocked && speechEnabled) speak(answerText);
+  } catch(err){
     console.error(err);
-    addMessage("Error connecting to API", "bot");
+    addMessage("Error connecting to API","bot");
   }
 }
 
-function startVoice() {
-  if (!voiceEnabled) return;
-  if (!("webkitSpeechRecognition" in window)) {
+function startVoice(){
+  if(!("webkitSpeechRecognition" in window)){
     alert("Voice recognition not supported");
     return;
   }
-  if (!mic) {
-    mic = new webkitSpeechRecognition();
-    mic.lang = "en-US";
-    mic.continuous = false;
-    mic.interimResults = false;
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  if(mic) mic.stop();
+  
+  mic = new webkitSpeechRecognition();
+  mic.lang="en-US";
+  mic.continuous=false;
+  mic.interimResults=false;
 
-    mic.onstart = () => { if (speechSynthesis.speaking) speechSynthesis.cancel(); };
-    mic.onresult = e => {
-      document.getElementById("input").value = e.results[0][0].transcript;
-      sendMessage();
-    };
-    mic.onerror = e => console.error(e);
-    mic.onend = () => { mic = null; };
-  }
+  mic.onresult=e=>{
+    const transcript=e.results[0][0].transcript;
+    addMessage(transcript,"user");
+    sendVoiceMessage(transcript);
+  };
+  mic.onerror=e=>console.error(e);
+  mic.onend=()=>{ mic=null; };
   mic.start();
 }
 
-function stopVoice() {
-  if(mic) {
-    mic.onresult = null;
-    mic.onerror = null;
-    mic.stop();
-    mic = null;
+async function sendVoiceMessage(text){
+  try{
+    let answerText="";
+    const res = await fetch(apiBase + "/ask?question="+encodeURIComponent(text));
+    const data = await res.json();
+    answerText = (data && data.answer)? data.answer:"No answer received from API";
+    addMessage(answerText,"bot");
+    if(audioUnlocked && speechEnabled) speak(answerText);
+  } catch(err){
+    console.error(err);
+    addMessage("Error connecting to API","bot");
   }
 }
 
-function toggleVoice() {
-  voiceEnabled = !voiceEnabled;
-  document.getElementById("voiceToggleBtn").innerText = "Voice: " + (voiceEnabled ? "On" : "Off");
+function stopVoice(){
+  if(mic){
+    mic.onresult=null;
+    mic.onerror=null;
+    mic.stop();
+    mic=null;
+  }
 }
 
-function toggleSpeech() {
-  speechEnabled = !speechEnabled;
-  document.getElementById("speechToggleBtn").innerText = "Speech: " + (speechEnabled ? "On" : "Off");
-}
-
-function speak(text) {
-  if (speechSynthesis.speaking) speechSynthesis.cancel();
+function speak(text){
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
   utter = new SpeechSynthesisUtterance(text);
   speechSynthesis.speak(utter);
 }
-
-document.getElementById("input").addEventListener("focus", () => {
-  if (voiceEnabled) startVoice();
-});
 </script>
 
 </body>
