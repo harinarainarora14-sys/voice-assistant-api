@@ -1,122 +1,115 @@
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
-import json
-from datetime import datetime, timezone
-from fuzzywuzzy import fuzz
-import requests
-from urllib.parse import quote
-import string
-
-# ------------------------
-# Load responses
-# ------------------------
-try:
-    with open("responses.json", "r") as f:
-        responses = json.load(f)
-except Exception as e:
-    print("⚠️ Error loading responses.json:", e)
-    responses = {}
-
-# ------------------------
-# Initialize FastAPI
-# ------------------------
-app = FastAPI()
-
-# CORS middleware to allow frontend access globally
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  
-    allow_credentials=False,  
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ------------------------
-# Home & ping routes
-# ------------------------
-@app.get("/")
-def home():
-    return {"message": "✅ Voice Assistant API is running"}
-
-@app.get("/ping")
-def ping():
-    return {"message": "pong"}
-
-# ------------------------
-# Main ask endpoint
-# ------------------------
-@app.get("/ask")
-def ask(question: str = Query(...)):
-    # Lowercase, strip spaces and trailing punctuation
-    question = question.lower().strip()
-    question = question.rstrip(string.punctuation)
-
-    # --- Step 1: Exact match ---
-    for intent, data in responses.items():
-        for q in data.get("question", []):
-            if question == q.lower().strip():
-                return process_answer(intent, question)
-
-    # --- Step 2: Fuzzy match ---
-    best_match = None
-    best_score = 0
-    for intent, data in responses.items():
-        for q in data.get("question", []):
-            score = fuzz.ratio(question, q.lower())
-            if score > best_score:
-                best_score = score
-                best_match = intent
-
-    print(f"[DEBUG] Best match: {best_match}, Score: {best_score}")
-
-    if best_match and best_score >= 85:
-        return process_answer(best_match, question)
-
-    # --- Step 3: Wikipedia fallback for long questions ---
-    if len(question.split()) >= 3:
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # --- Step 4: No match ---
-    return {"answer": f"Sorry, I don't understand '{question}'."}
-
-
-# ------------------------
-# Answer processing
-# ------------------------
-def process_answer(intent: str, question: str):
-    """Handles the answer logic (time, wiki, or static)"""
-    answer = responses[intent].get("answer", "Sorry, I don't understand that.")
-
-    # Time request → return 12-hour hh:mm AM/PM
-    if answer.upper() == "TIME":
-        now_local = datetime.now().astimezone()
-        time_str = now_local.strftime("%I:%M %p")  # 12-hour format
-        return {"answer": time_str, "type": "time"}
-
-    # Wikipedia request
-    elif answer.upper() == "WIKIPEDIA":
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # Default static response
-    else:
-        return {"answer": answer}
+{
+  "greeting": {
+    "question": [
+      "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+      "hiya", "yo", "sup", "howdy", "greetings", "hey there", "hi there"
+    ],
+    "answer": "Hello! How can I help you today?"
+  },
+  "goodbye": {
+    "question": [
+      "bye", "goodbye", "see you", "quit", "exit",
+      "see you later", "catch you later", "talk to you soon", "farewell", "bye bye", "later"
+    ],
+    "answer": "Goodbye! Have a nice day."
+  },
+  "time": {
+    "question": [
+      "what time is it", "current time", "tell me the time",
+      "do you know the time", "can you tell me the time", "what's the time now",
+      "time please", "could you tell me the time"
+    ],
+    "answer": "TIME"
+  },
+  "wikipedia": {
+    "question": [
+      "tell me about", "who is", "what is", "search for",
+      "give me information on", "explain", "tell me something about", "find info about",
+      "look up", "show me info about"
+    ],
+    "answer": "WIKIPEDIA"
+  },
+  "your_name": {
+    "question": [
+      "what is your name", "who are you", "tell me your name",
+      "may I know your name", "do you have a name", "what should I call you",
+      "name please", "could you tell me your name"
+    ],
+    "answer": "I am your voice assistant."
+  },
+  "how_are_you": {
+    "question": [
+      "how are you", "how's it going", "how do you do",
+      "are you doing okay", "how are things", "what's up with you",
+      "how you feeling", "everything good"
+    ],
+    "answer": "I am doing great! How about you?"
+  },
+  "joke": {
+    "question": [
+      "tell me a joke", "make me laugh", "say something funny",
+      "got any jokes", "make me smile", "give me a joke",
+      "funny joke", "say a joke"
+    ],
+    "answer": "Why did the computer go to the doctor? Because it caught a virus!"
+  },
+  "motivation": {
+    "question": [
+      "motivate me", "i need motivation", "inspire me",
+      "say something positive", "give me motivation", "lift me up",
+      "encourage me", "cheer me up"
+    ],
+    "answer": "Believe in yourself! Every day is a new opportunity to grow and succeed."
+  },
+  "thanks": {
+    "question": [
+      "thanks", "thank you", "thx",
+      "appreciate it", "thanks a lot", "thank you so much",
+      "many thanks", "thanks buddy"
+    ],
+    "answer": "You're welcome!"
+  },
+  "sad": {
+    "question": [
+      "I'm feeling low", "My mood is really low", "I feel like crying", "I'm down today",
+      "I feel sad", "I'm unhappy", "I'm not okay", "I feel depressed",
+      "feeling blue", "I feel terrible"
+    ],
+    "answer": "It's okay to feel low. Take a deep breath, you're stronger than you think."
+  },
+  "happy": {
+    "question": [
+      "I feel so happy", "Today feels amazing", "I'm in a great mood today",
+      "I'm feeling good", "I'm cheerful", "I feel awesome", "I'm really glad",
+      "I feel fantastic", "I'm joyful"
+    ],
+    "answer": "That's amazing! Let's keep this vibe and make your day even brighter."
+  },
+  "anger": {
+    "question": [
+      "I'm very irritated", "I'm really frustrated", "I'm losing my patience", "I feel annoyed", "I feel angry",
+      "I'm mad", "I'm upset", "I'm pissed off", "I'm furious", "angry", "so annoyed"
+    ],
+    "answer": "It's okay to feel angry. Let's slow down together - breathe in slowly, hold it, and let it go."
+  },
+  "surprised": {
+    "question": [
+      "I'm shocked", "I can't believe what happened", "This was totally unexpected",
+      "I'm surprised", "that blew my mind", "I'm astonished", "I'm amazed",
+      "wow", "unbelievable"
+    ],
+    "answer": "Life can be full of surprises. Sometimes it brings growth - let's see the good side of it."
+  },
+  "yes": {
+    "question": ["yes", "yeah", "yep", "sure", "of course", "ok", "okay"],
+    "answer": "Great! Let's continue."
+  },
+  "no": {
+    "question": ["no", "nope", "nah", "not really"],
+    "answer": "Okay, no problem. What else can I do for you?"
+  },
+  "maybe": {
+    "question": ["maybe", "not sure", "possibly", "could be"],
+    "answer": "Take your time, I'm here whenever you decide."
+  }
+}
