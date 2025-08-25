@@ -2,13 +2,12 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Built-in Python 3.9+
+from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
 import string
 import re
-import time
 
 # ------------------------
 # Load responses
@@ -25,7 +24,6 @@ except Exception as e:
 # ------------------------
 app = FastAPI()
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,7 +33,7 @@ app.add_middleware(
 )
 
 # ------------------------
-# Home & ping routes
+# Home & ping
 # ------------------------
 @app.get("/")
 def home():
@@ -50,7 +48,6 @@ def ping():
 # ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
-    # Lowercase, strip spaces and trailing punctuation
     question_clean = question.lower().strip()
     question_clean = question_clean.rstrip(string.punctuation + "!?")
 
@@ -58,7 +55,7 @@ def ask(question: str = Query(...)):
     for intent, data in responses.items():
         for q in data.get("question", []):
             if question_clean == q.lower().strip():
-                return process_answer(intent, question_clean)
+                return process_answer(intent, question)
 
     # --- Step 2: Fuzzy match ---
     best_match = None
@@ -71,13 +68,13 @@ def ask(question: str = Query(...)):
                 best_match = intent
 
     if best_match and best_score >= 85:
-        return process_answer(best_match, question_clean)
+        return process_answer(best_match, question)
 
-    # --- Step 3: Wikipedia fallback for longer queries ---
+    # --- Step 3: Wikipedia fallback for long questions ---
     if len(question_clean.split()) >= 3:
-        wiki_answer = fetch_wikipedia_summary(question_clean)
-        if wiki_answer:
-            return {"answer": wiki_answer}
+        summary = fetch_wikipedia_summary(question)
+        if summary:
+            return {"answer": summary}
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
@@ -88,7 +85,6 @@ def ask(question: str = Query(...)):
 # Answer processing
 # ------------------------
 def process_answer(intent: str, question: str):
-    """Handles the answer logic (time, wiki, or static)"""
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
     # Time request → Indian local time
@@ -100,9 +96,9 @@ def process_answer(intent: str, question: str):
 
     # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
-        wiki_answer = fetch_wikipedia_summary(question)
-        if wiki_answer:
-            return {"answer": wiki_answer}
+        summary = fetch_wikipedia_summary(question)
+        if summary:
+            return {"answer": summary}
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
@@ -111,7 +107,7 @@ def process_answer(intent: str, question: str):
         return {"answer": answer}
 
 # ------------------------
-# Wikipedia fetch with retries & cleaned query
+# Wikipedia helper
 # ------------------------
 def fetch_wikipedia_summary(question: str) -> str:
     wiki_keywords = [
@@ -120,28 +116,40 @@ def fetch_wikipedia_summary(question: str) -> str:
     ]
     query = question
     for kw in wiki_keywords:
-        if question.startswith(kw):
+        if question.lower().startswith(kw):
             query = question[len(kw):].strip()
             break
 
-    # Clean query: remove special characters
-    query = re.sub(r"[^a-zA-Z0-9\s]", "", query)
+    # Clean query
+    query_clean = re.sub(r"[^a-zA-Z0-9\s]", "", query)
 
-    url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-    retries = 3
-    for attempt in range(retries):
-        try:
-            resp = requests.get(url, timeout=7)
-            if resp.status_code == 200:
-                data = resp.json()
-                extract = data.get("extract", "")
-                if extract:
-                    return extract
-            elif resp.status_code == 404:
-                return ""  # Page not found
-        except requests.exceptions.RequestException:
-            if attempt < retries - 1:
-                time.sleep(1)  # wait 1 second before retry
-            else:
-                return ""
-    return ""
+    # Step 1: Search for page title
+    search_url = "https://en.wikipedia.org/w/api.php"
+    params = {
+        "action": "query",
+        "list": "search",
+        "srsearch": query_clean,
+        "format": "json",
+        "utf8": 1,
+        "srlimit": 1
+    }
+    try:
+        resp = requests.get(search_url, params=params, timeout=7)
+        data = resp.json()
+        search_results = data.get("query", {}).get("search", [])
+        if not search_results:
+            return ""
+        title = search_results[0]["title"]
+
+        # Step 2: Fetch summary
+        summary_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(title)
+        resp = requests.get(summary_url, timeout=7)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("extract", "")
+        else:
+            return ""
+    except requests.exceptions.RequestException:
+        return ""
+
+
