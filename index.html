@@ -18,7 +18,6 @@
     overflow: hidden;
   }
 
-  /* Chat container fills remaining space above input bar */
   #chat-container {
     flex: 1 1 auto;
     display: flex;
@@ -55,7 +54,6 @@
     box-shadow: 0 4px 10px rgba(255,255,255,0.05);
   }
 
-  /* Input bar pinned at bottom with fixed button sizing */
   #input-bar {
     flex-shrink: 0;
     display: flex;
@@ -93,7 +91,6 @@
     color: #fff;
     cursor: pointer;
     min-width: 90px;
-    transition: all 0.2s ease;
     white-space: nowrap;
   }
 
@@ -102,33 +99,28 @@
     transform: scale(1.05);
   }
 
-  /* Small devices */
   @media (max-width: 480px) {
     .bubble { font-size: 0.875rem; padding: 8px 10px; max-width: 90%; }
     #input-bar input { font-size: 0.875rem; }
     #input-bar button { font-size: 0.875rem; padding: 10px 12px; min-width: 70px; }
   }
 
-  /* Medium devices */
   @media (max-width: 768px) {
     .bubble { max-width: 85%; }
     #input-bar input { font-size: 0.95rem; }
   }
 
-  /* iPad 9th Generation layout */
   @media (min-width: 768px) and (max-width: 1620px) {
     html, body {
       height: 100vh;
       width: 100vw;
       font-size: 1rem;
     }
-
     #chat-container {
       padding: 12px;
       max-width: 100%;
       flex: 1 1 auto;
     }
-
     .bubble {
       max-width: 70%;
       font-size: 1.05rem;
@@ -136,12 +128,10 @@
       padding: 12px 16px;
       margin: 6px 0;
     }
-
     #input-bar input {
       font-size: 1rem;
       padding: 14px 12px;
     }
-
     #input-bar button {
       font-size: 1rem;
       padding: 14px 18px;
@@ -149,7 +139,6 @@
     }
   }
 
-  /* Scrollbar styling */
   #chat-container::-webkit-scrollbar {
     width: 6px;
   }
@@ -164,10 +153,11 @@
 <div id="chat-container"></div>
 
 <div id="input-bar">
-  <input id="input" type="text" placeholder="Type your message..." onkeydown="if(event.key==='Enter'){sendMessage();}">
-  <button onclick="sendMessage()">Send</button>
-  <button id="voiceToggleBtn" onclick="toggleVoice()">Voice: On</button>
-  <button id="speechToggleBtn" onclick="toggleSpeech()">Speech: On</button>
+  <input id="input" type="text" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendMessage();}">
+  <button type="button" onclick="sendMessage()">Send</button>
+  <button type="button" id="voiceToggleBtn" onclick="toggleVoice()">Voice: On</button>
+  <button type="button" id="speechToggleBtn" onclick="toggleSpeech()">Speech: On</button>
 </div>
 
 <script>
@@ -177,7 +167,7 @@ let mic = null;
 let utter = null;
 let audioUnlocked = false;
 
-// Unlock audio on first tap for iOS
+// Unlock audio on first tap
 document.body.addEventListener("click", () => {
   if (!audioUnlocked) {
     const unlockUtter = new SpeechSynthesisUtterance("Voice assistant activated");
@@ -220,14 +210,12 @@ async function sendMessage() {
 
   try {
     let answerText = "";
-
     if (text.toLowerCase().includes("time")) {
       answerText = formatTime12Hour();
     } else {
       // Dummy response for testing
       answerText = "This is a dummy response from the assistant.";
     }
-
     addMessage(answerText, "bot");
     if (speechEnabled && audioUnlocked) speak(answerText);
   } catch (err) {
@@ -288,5 +276,6 @@ document.getElementById("input").addEventListener("focus", () => {
   if (voiceEnabled) startVoice();
 });
 </script>
+
 </body>
 </html>
