@@ -74,21 +74,34 @@ def ask(question: str = Query(...)):
 
     # --- Step 3: Wikipedia fallback for long questions ---
     if len(question.split()) >= 3:
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
+        return wikipedia_fallback(question)
 
     # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
 
+# ------------------------
+# Wikipedia fallback
+# ------------------------
+def wikipedia_fallback(question: str):
+    # Remove any Wikipedia trigger word from start
+    triggers = responses.get("wikipedia", {}).get("question", [])
+    query = question
+    for t in triggers:
+        t_lower = t.lower()
+        if query.startswith(t_lower):
+            query = query[len(t_lower):].strip()
+            break
+
+    url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+    try:
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return {"answer": data.get("extract", "No summary found.")}
+        else:
+            return {"answer": "I couldn't find anything on Wikipedia."}
+    except requests.exceptions.RequestException:
+        return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
 # ------------------------
 # Answer processing
@@ -105,19 +118,8 @@ def process_answer(intent: str, question: str):
 
     # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
+        return wikipedia_fallback(question)
 
     # Default static response
     else:
         return {"answer": answer}
-
