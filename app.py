@@ -2,13 +2,11 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Built-in, no extra dependency
+from zoneinfo import ZoneInfo  # Standard library, no extra dependencies
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
 import string
-import re
-import time
 
 # ------------------------
 # Load responses
@@ -24,6 +22,7 @@ except Exception as e:
 # Initialize FastAPI
 # ------------------------
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,94 +32,76 @@ app.add_middleware(
 )
 
 # ------------------------
-# Helper: Wikipedia fetch with retry & debug
+# Home & ping routes
 # ------------------------
-def fetch_wikipedia_summary(query: str):
-    wiki_keywords = [
-        "tell me about", "who is", "what is", "search for",
-        "give me information on", "explain", "tell me something about", "find info about"
-    ]
-    q = query.lower().strip()
-    for kw in wiki_keywords:
-        if q.startswith(kw):
-            q = q[len(kw):].strip()
-            break
-    q = re.sub(r"[^\w\s]", "", q).strip()
-    if not q:
-        print("[DEBUG] Wikipedia query empty after cleaning")
-        return ""
+@app.get("/")
+def home():
+    return {"message": "✅ Voice Assistant API is running"}
 
-    # Try multiple times
-    for attempt in range(2):
-        try:
-            print(f"[DEBUG] Wikipedia query attempt {attempt+1}: '{q}'")
-            # Step 1: opensearch to get exact title
-            search_url = "https://en.wikipedia.org/w/api.php"
-            params = {"action": "opensearch", "search": q, "limit": 1, "namespace": 0, "format": "json"}
-            resp = requests.get(search_url, params=params, timeout=7)
-            data = resp.json()
-            titles = data[1]
-            if not titles:
-                print("[DEBUG] No titles found on Wikipedia")
-                return ""
-            title = titles[0]
-            print(f"[DEBUG] Wikipedia resolved title: '{title}'")
-
-            # Step 2: fetch summary
-            summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title, safe='')}"
-            resp2 = requests.get(summary_url, timeout=7)
-            if resp2.status_code == 200:
-                extract = resp2.json().get("extract", "")
-                if extract:
-                    print("[DEBUG] Wikipedia summary found")
-                    return extract
-                else:
-                    print("[DEBUG] Wikipedia summary empty")
-            else:
-                print(f"[DEBUG] Wikipedia summary request failed, status: {resp2.status_code}")
-            # fallback: wait and retry
-            time.sleep(1)
-        except requests.exceptions.RequestException as e:
-            print(f"[DEBUG] Wikipedia request exception: {e}")
-            time.sleep(1)
-    return ""
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
 
 # ------------------------
 # Main ask endpoint
 # ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
-    question_orig = question
-    question_clean = question.lower().strip().rstrip(string.punctuation + "!?")
+    question = question.lower().strip()
+    question = question.rstrip(string.punctuation + "!?")
 
-    # Exact match
+    # --- Step 1: Exact match ---
     for intent, data in responses.items():
         for q in data.get("question", []):
-            if question_clean == q.lower().strip():
-                return process_answer(intent, question_orig)
+            if question == q.lower().strip():
+                return process_answer(intent, question)
 
-    # Fuzzy match
+    # --- Step 2: Fuzzy match ---
     best_match = None
     best_score = 0
     for intent, data in responses.items():
         for q in data.get("question", []):
-            score = fuzz.ratio(question_clean, q.lower())
+            score = fuzz.ratio(question, q.lower())
             if score > best_score:
                 best_score = score
                 best_match = intent
+
     if best_match and best_score >= 85:
-        return process_answer(best_match, question_orig)
+        return process_answer(best_match, question)
 
-    # Wikipedia fallback
-    if len(question_clean.split()) >= 3:
-        summary = fetch_wikipedia_summary(question_orig)
-        if summary:
-            return {"answer": summary}
-        else:
-            return {"answer": "I couldn't find anything on Wikipedia."}
+    # --- Step 3: Wikipedia fallback for long questions ---
+    if len(question.split()) >= 3:
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
 
-    # No match
-    return {"answer": f"Sorry, I don't understand '{question_orig}'."}
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    extract = data.get("extract", "")
+                    if extract:
+                        return {"answer": extract}
+                    else:
+                        return {"answer": "I couldn't find anything on Wikipedia."}
+                except json.JSONDecodeError:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
+        except requests.exceptions.RequestException as e:
+            print(f"[DEBUG] Wikipedia request exception: {e}")
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
+
+    # --- Step 4: No match ---
+    return {"answer": f"Sorry, I don't understand '{question}'."}
 
 # ------------------------
 # Answer processing
@@ -128,18 +109,44 @@ def ask(question: str = Query(...)):
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
+    # Time request → Indian local time
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
-        time_str = now_india.strftime("%I:%M %p")
+        time_str = now_india.strftime("%I:%M %p")  # 12-hour format
         return {"answer": time_str, "type": "time_india"}
 
+    # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
-        summary = fetch_wikipedia_summary(question)
-        if summary:
-            return {"answer": summary}
-        else:
-            return {"answer": "I couldn't find anything on Wikipedia."}
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
 
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    extract = data.get("extract", "")
+                    if extract:
+                        return {"answer": extract}
+                    else:
+                        return {"answer": "I couldn't find anything on Wikipedia."}
+                except json.JSONDecodeError:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
+        except requests.exceptions.RequestException as e:
+            print(f"[DEBUG] Wikipedia request exception: {e}")
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
+
+    # Default static response
     else:
         return {"answer": answer}
