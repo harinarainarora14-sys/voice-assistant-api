@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Standard library, no extra dependencies
+from zoneinfo import ZoneInfo  # Standard library
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -82,8 +82,10 @@ def ask(question: str = Query(...)):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        print(f"[DEBUG] Wikipedia URL: {url}")  # Debug log
         try:
             resp = requests.get(url, timeout=5)
+            print(f"[DEBUG] HTTP status: {resp.status_code}")  # Debug log
             if resp.status_code == 200:
                 try:
                     data = resp.json()
@@ -92,7 +94,8 @@ def ask(question: str = Query(...)):
                         return {"answer": extract}
                     else:
                         return {"answer": "I couldn't find anything on Wikipedia."}
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    print(f"[DEBUG] JSON decode error: {e}")
                     return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
@@ -129,8 +132,10 @@ def process_answer(intent: str, question: str):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        print(f"[DEBUG] Wikipedia URL (process_answer): {url}")
         try:
             resp = requests.get(url, timeout=5)
+            print(f"[DEBUG] HTTP status (process_answer): {resp.status_code}")
             if resp.status_code == 200:
                 try:
                     data = resp.json()
@@ -139,14 +144,16 @@ def process_answer(intent: str, question: str):
                         return {"answer": extract}
                     else:
                         return {"answer": "I couldn't find anything on Wikipedia."}
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    print(f"[DEBUG] JSON decode error (process_answer): {e}")
                     return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
         except requests.exceptions.RequestException as e:
-            print(f"[DEBUG] Wikipedia request exception: {e}")
+            print(f"[DEBUG] Wikipedia request exception (process_answer): {e}")
             return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
     # Default static response
     else:
         return {"answer": answer}
+
