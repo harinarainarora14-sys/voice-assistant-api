@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
 import string
+import pytz
 
 # ------------------------
 # Load responses
@@ -49,7 +50,7 @@ def ping():
 def ask(question: str = Query(...)):
     # Lowercase, strip spaces and trailing punctuation
     question = question.lower().strip()
-    question = question.rstrip(".!,;:?")  # ignore common punctuation
+    question = question.rstrip(string.punctuation + "!?")
 
     # --- Step 1: Exact match ---
     for intent, data in responses.items():
@@ -67,20 +68,31 @@ def ask(question: str = Query(...)):
                 best_score = score
                 best_match = intent
 
-    print(f"[DEBUG] Best match: {best_match}, Score: {best_score}")
-
     if best_match and best_score >= 85:
         return process_answer(best_match, question)
 
     # --- Step 3: Wikipedia fallback for long questions ---
     if len(question.split()) >= 3:
-        query = question.replace("tell me about", "").strip()
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
+
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
         try:
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
         except requests.exceptions.RequestException:
@@ -89,7 +101,6 @@ def ask(question: str = Query(...)):
     # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
 
-
 # ------------------------
 # Answer processing
 # ------------------------
@@ -97,22 +108,35 @@ def process_answer(intent: str, question: str):
     """Handles the answer logic (time, wiki, or static)"""
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → return 12-hour hh:mm AM/PM in IST
+    # Time request → Indian local time 12-hour format
     if answer.upper() == "TIME":
-        ist_offset = timezone(timedelta(hours=5, minutes=30))
-        now_ist = datetime.now(ist_offset)
-        time_str = now_ist.strftime("%I:%M %p")  # 12-hour format
-        return {"answer": time_str, "type": "time_ist"}
+        india_tz = pytz.timezone("Asia/Kolkata")
+        now_india = datetime.now(india_tz)
+        time_str = now_india.strftime("%I:%M %p")  # 12-hour format
+        return {"answer": time_str, "type": "time_india"}
 
     # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
-        query = question.replace("tell me about", "").strip()
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
+
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
         try:
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
         except requests.exceptions.RequestException:
