@@ -9,9 +9,7 @@ from urllib.parse import quote
 import string
 import re
 
-# ------------------------
 # Load responses
-# ------------------------
 try:
     with open("responses.json", "r") as f:
         responses = json.load(f)
@@ -19,9 +17,6 @@ except Exception as e:
     print("⚠️ Error loading responses.json:", e)
     responses = {}
 
-# ------------------------
-# Initialize FastAPI
-# ------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -32,9 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ------------------------
-# Home & ping
-# ------------------------
 @app.get("/")
 def home():
     return {"message": "✅ Voice Assistant API is running"}
@@ -43,21 +35,18 @@ def home():
 def ping():
     return {"message": "pong"}
 
-# ------------------------
-# Main ask endpoint
-# ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
     question_clean = question.lower().strip()
     question_clean = question_clean.rstrip(string.punctuation + "!?")
 
-    # --- Step 1: Exact match ---
+    # Exact match
     for intent, data in responses.items():
         for q in data.get("question", []):
             if question_clean == q.lower().strip():
                 return process_answer(intent, question)
 
-    # --- Step 2: Fuzzy match ---
+    # Fuzzy match
     best_match = None
     best_score = 0
     for intent, data in responses.items():
@@ -66,11 +55,10 @@ def ask(question: str = Query(...)):
             if score > best_score:
                 best_score = score
                 best_match = intent
-
     if best_match and best_score >= 85:
         return process_answer(best_match, question)
 
-    # --- Step 3: Wikipedia fallback for long questions ---
+    # Wikipedia fallback
     if len(question_clean.split()) >= 3:
         summary = fetch_wikipedia_summary(question)
         if summary:
@@ -78,23 +66,17 @@ def ask(question: str = Query(...)):
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
-    # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
 
-# ------------------------
-# Answer processing
-# ------------------------
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → Indian local time
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
-        time_str = now_india.strftime("%I:%M %p")  # 12-hour format
+        time_str = now_india.strftime("%I:%M %p")
         return {"answer": time_str, "type": "time_india"}
 
-    # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
         summary = fetch_wikipedia_summary(question)
         if summary:
@@ -102,13 +84,9 @@ def process_answer(intent: str, question: str):
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
-    # Default static response
     else:
         return {"answer": answer}
 
-# ------------------------
-# Wikipedia helper
-# ------------------------
 def fetch_wikipedia_summary(question: str) -> str:
     wiki_keywords = [
         "tell me about", "who is", "what is", "search for",
@@ -120,10 +98,9 @@ def fetch_wikipedia_summary(question: str) -> str:
             query = question[len(kw):].strip()
             break
 
-    # Clean query
     query_clean = re.sub(r"[^a-zA-Z0-9\s]", "", query)
 
-    # Step 1: Search for page title
+    # Step 1: Search Wikipedia
     search_url = "https://en.wikipedia.org/w/api.php"
     params = {
         "action": "query",
@@ -141,15 +118,14 @@ def fetch_wikipedia_summary(question: str) -> str:
             return ""
         title = search_results[0]["title"]
 
-        # Step 2: Fetch summary
-        summary_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(title)
+        # Step 2: Fetch summary using REST API with proper URL encoding
+        summary_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(title, safe='')
         resp = requests.get(summary_url, timeout=7)
         if resp.status_code == 200:
             data = resp.json()
-            return data.get("extract", "")
-        else:
-            return ""
+            extract = data.get("extract", "")
+            if extract:
+                return extract
+        return ""
     except requests.exceptions.RequestException:
         return ""
-
-
