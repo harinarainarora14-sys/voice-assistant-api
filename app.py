@@ -2,14 +2,16 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo  # Built-in in Python 3.9+
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
 import string
 import re
 
+# ------------------------
 # Load responses
+# ------------------------
 try:
     with open("responses.json", "r") as f:
         responses = json.load(f)
@@ -17,6 +19,9 @@ except Exception as e:
     print("⚠️ Error loading responses.json:", e)
     responses = {}
 
+# ------------------------
+# Initialize FastAPI
+# ------------------------
 app = FastAPI()
 
 app.add_middleware(
@@ -27,6 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ------------------------
+# Home & ping routes
+# ------------------------
 @app.get("/")
 def home():
     return {"message": "✅ Voice Assistant API is running"}
@@ -35,18 +43,21 @@ def home():
 def ping():
     return {"message": "pong"}
 
+# ------------------------
+# Main ask endpoint
+# ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
     question_clean = question.lower().strip()
     question_clean = question_clean.rstrip(string.punctuation + "!?")
 
-    # Exact match
+    # Step 1: Exact match
     for intent, data in responses.items():
         for q in data.get("question", []):
             if question_clean == q.lower().strip():
-                return process_answer(intent, question)
+                return process_answer(intent, question_clean)
 
-    # Fuzzy match
+    # Step 2: Fuzzy match
     best_match = None
     best_score = 0
     for intent, data in responses.items():
@@ -55,28 +66,36 @@ def ask(question: str = Query(...)):
             if score > best_score:
                 best_score = score
                 best_match = intent
-    if best_match and best_score >= 85:
-        return process_answer(best_match, question)
 
-    # Wikipedia fallback
+    if best_match and best_score >= 85:
+        return process_answer(best_match, question_clean)
+
+    # Step 3: Wikipedia fallback
     if len(question_clean.split()) >= 3:
-        summary = fetch_wikipedia_summary(question)
+        summary = fetch_wikipedia_summary(question_clean)
         if summary:
             return {"answer": summary}
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
-    return {"answer": f"Sorry, I don't understand '{question}'."}
+    # Step 4: No match
+    return {"answer": f"Sorry, I don't understand '{question_clean}'."}
 
+
+# ------------------------
+# Answer processing
+# ------------------------
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
+    # Time request → Indian local time
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
         time_str = now_india.strftime("%I:%M %p")
         return {"answer": time_str, "type": "time_india"}
 
+    # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
         summary = fetch_wikipedia_summary(question)
         if summary:
@@ -84,23 +103,22 @@ def process_answer(intent: str, question: str):
         else:
             return {"answer": "I couldn't find anything on Wikipedia."}
 
+    # Default static response
     else:
         return {"answer": answer}
 
-def fetch_wikipedia_summary(question: str) -> str:
-    wiki_keywords = [
-        "tell me about", "who is", "what is", "search for",
-        "give me information on", "explain", "tell me something about", "find info about"
-    ]
-    query = question
-    for kw in wiki_keywords:
-        if question.lower().startswith(kw):
-            query = question[len(kw):].strip()
-            break
 
-    query_clean = re.sub(r"[^a-zA-Z0-9\s]", "", query)
+# ------------------------
+# Wikipedia helper
+# ------------------------
+def fetch_wikipedia_summary(query: str):
+    # Remove punctuation for search
+    query_clean = re.sub(r"[^\w\s]", "", query)
+    query_clean = re.sub(r"\s+", " ", query_clean).strip()
+    if not query_clean:
+        return ""
 
-    # Step 1: Search Wikipedia
+    # Wikipedia search API
     search_url = "https://en.wikipedia.org/w/api.php"
     params = {
         "action": "query",
@@ -116,16 +134,17 @@ def fetch_wikipedia_summary(question: str) -> str:
         search_results = data.get("query", {}).get("search", [])
         if not search_results:
             return ""
-        title = search_results[0]["title"]
 
-        # Step 2: Fetch summary using REST API with proper URL encoding
+        # Fetch summary
+        title = search_results[0]["title"]
         summary_url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(title, safe='')
-        resp = requests.get(summary_url, timeout=7)
-        if resp.status_code == 200:
-            data = resp.json()
-            extract = data.get("extract", "")
-            if extract:
-                return extract
-        return ""
+        resp2 = requests.get(summary_url, timeout=7)
+        if resp2.status_code == 200:
+            data2 = resp2.json()
+            extract = data2.get("extract", "")
+            return extract
+        else:
+            return ""
     except requests.exceptions.RequestException:
         return ""
+
