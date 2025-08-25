@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Built-in, no extra dependency
+from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -22,8 +22,6 @@ except Exception as e:
 # Initialize FastAPI
 # ------------------------
 app = FastAPI()
-
-# CORS middleware to allow frontend access globally
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -44,21 +42,56 @@ def ping():
     return {"message": "pong"}
 
 # ------------------------
+# Wikipedia helper
+# ------------------------
+def fetch_wikipedia_summary(query: str):
+    """Fetch Wikipedia summary, handle disambiguation if needed."""
+    query = "_".join([w.capitalize() for w in query.split()])
+    url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+    try:
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+        print(f"[DEBUG] Wikipedia API response: {data}")  # Debug
+
+        # Page not found
+        if data.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
+            return "I couldn't find anything on Wikipedia."
+
+        # Disambiguation page
+        if data.get("type") == "disambiguation":
+            # Try first link from content_urls.desktop.page
+            first_link = data.get("content_urls", {}).get("desktop", {}).get("page")
+            if first_link:
+                title = first_link.split("/")[-1]
+                return fetch_wikipedia_summary(title)
+            else:
+                return "This topic is ambiguous. Try being more specific."
+
+        # Normal extract
+        extract = data.get("extract", "")
+        if extract:
+            return extract
+        else:
+            return "I couldn't find anything on Wikipedia."
+
+    except requests.exceptions.RequestException:
+        return "Sorry, there was an error accessing Wikipedia."
+
+# ------------------------
 # Main ask endpoint
 # ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
-    # Lowercase, strip spaces and trailing punctuation
     question = question.lower().strip()
     question = question.rstrip(string.punctuation + "!?")
 
-    # --- Step 1: Exact match ---
+    # Step 1: Exact match
     for intent, data in responses.items():
         for q in data.get("question", []):
             if question == q.lower().strip():
                 return process_answer(intent, question)
 
-    # --- Step 2: Fuzzy match ---
+    # Step 2: Fuzzy match
     best_match = None
     best_score = 0
     for intent, data in responses.items():
@@ -71,7 +104,7 @@ def ask(question: str = Query(...)):
     if best_match and best_score >= 85:
         return process_answer(best_match, question)
 
-    # --- Step 3: Wikipedia fallback for long questions ---
+    # Step 3: Wikipedia fallback
     if len(question.split()) >= 3:
         wiki_keywords = [
             "tell me about", "who is", "what is", "search for",
@@ -82,46 +115,24 @@ def ask(question: str = Query(...)):
             if question.startswith(kw):
                 query = question[len(kw):].strip()
                 break
+        summary = fetch_wikipedia_summary(query)
+        return {"answer": summary}
 
-        # Format query for Wikipedia API: capitalize words, replace spaces with underscores
-        query = "_".join([w.capitalize() for w in query.split()])
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
-                    return {"answer": "I couldn't find anything on Wikipedia."}
-                extract = data.get("extract", "")
-                if extract:
-                    return {"answer": extract}
-                else:
-                    return {"answer": "I couldn't find anything on Wikipedia."}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # --- Step 4: No match ---
+    # Step 4: No match
     return {"answer": f"Sorry, I don't understand '{question}'."}
-
 
 # ------------------------
 # Answer processing
 # ------------------------
 def process_answer(intent: str, question: str):
-    """Handles the answer logic (time, wiki, or static)"""
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → Indian local time 12-hour format
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
-        time_str = now_india.strftime("%I:%M %p")  # 12-hour format
+        time_str = now_india.strftime("%I:%M %p")
         return {"answer": time_str, "type": "time_india"}
 
-    # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
         wiki_keywords = [
             "tell me about", "who is", "what is", "search for",
@@ -132,28 +143,8 @@ def process_answer(intent: str, question: str):
             if question.startswith(kw):
                 query = question[len(kw):].strip()
                 break
+        summary = fetch_wikipedia_summary(query)
+        return {"answer": summary}
 
-        # Format query for Wikipedia API: capitalize words, replace spaces with underscores
-        query = "_".join([w.capitalize() for w in query.split()])
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("type") == "https://mediawiki.org/wiki/HyperSwitch/errors/not_found":
-                    return {"answer": "I couldn't find anything on Wikipedia."}
-                extract = data.get("extract", "")
-                if extract:
-                    return {"answer": extract}
-                else:
-                    return {"answer": "I couldn't find anything on Wikipedia."}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # Default static response
     else:
         return {"answer": answer}
-
