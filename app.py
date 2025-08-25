@@ -112,7 +112,18 @@ def process_answer(intent: str, question: str):
 # Wikipedia helper
 # ------------------------
 def fetch_wikipedia_summary(query: str):
-    # Remove punctuation for search
+    # Remove common prefixes
+    wiki_keywords = [
+        "tell me about", "who is", "what is", "search for",
+        "give me information on", "explain", "tell me something about", "find info about"
+    ]
+    query_lower = query.lower()
+    for kw in wiki_keywords:
+        if query_lower.startswith(kw):
+            query = query[len(kw):].strip()
+            break
+
+    # Remove punctuation and extra spaces
     query_clean = re.sub(r"[^\w\s]", "", query)
     query_clean = re.sub(r"\s+", " ", query_clean).strip()
     if not query_clean:
@@ -147,4 +158,3 @@ def fetch_wikipedia_summary(query: str):
             return ""
     except requests.exceptions.RequestException:
         return ""
-
