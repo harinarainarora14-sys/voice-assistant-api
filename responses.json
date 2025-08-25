@@ -1,54 +1,93 @@
 {
   "greeting": {
-    "question": ["hello", "hi", "hey", "good morning", "good afternoon", "good evening"],
+    "question": [
+      "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+      "hiya", "yo", "sup", "howdy", "greetings"
+    ],
     "answer": "Hello! How can I help you today?"
   },
   "goodbye": {
-    "question": ["bye", "goodbye", "see you", "quit", "exit"],
+    "question": [
+      "bye", "goodbye", "see you", "quit", "exit",
+      "see you later", "catch you later", "talk to you soon", "farewell"
+    ],
     "answer": "Goodbye! Have a nice day."
   },
   "time": {
-    "question": ["what time is it", "current time", "tell me the time"],
+    "question": [
+      "what time is it", "current time", "tell me the time",
+      "do you know the time", "can you tell me the time", "what's the time now"
+    ],
     "answer": "TIME"
   },
   "wikipedia": {
-    "question": ["tell me about", "who is", "what is", "search for"],
+    "question": [
+      "tell me about", "who is", "what is", "search for",
+      "give me information on", "explain", "tell me something about", "find info about"
+    ],
     "answer": "WIKIPEDIA"
   },
   "your_name": {
-    "question": ["what is your name", "who are you", "tell me your name"],
+    "question": [
+      "what is your name", "who are you", "tell me your name",
+      "may I know your name", "do you have a name", "what should I call you"
+    ],
     "answer": "I am your voice assistant."
   },
   "how_are_you": {
-    "question": ["how are you", "how's it going", "how do you do"],
+    "question": [
+      "how are you", "how's it going", "how do you do",
+      "are you doing okay", "how are things", "what's up with you"
+    ],
     "answer": "I am doing great! How about you?"
   },
   "joke": {
-    "question": ["tell me a joke", "make me laugh", "say something funny"],
+    "question": [
+      "tell me a joke", "make me laugh", "say something funny",
+      "got any jokes", "make me smile", "give me a joke"
+    ],
     "answer": "Why did the computer go to the doctor? Because it caught a virus!"
   },
   "motivation": {
-    "question": ["motivate me", "i need motivation", "inspire me"],
+    "question": [
+      "motivate me", "i need motivation", "inspire me",
+      "say something positive", "give me motivation", "lift me up"
+    ],
     "answer": "Believe in yourself! Every day is a new opportunity to grow and succeed."
   },
   "thanks": {
-    "question": ["thanks", "thank you", "thx"],
+    "question": [
+      "thanks", "thank you", "thx",
+      "appreciate it", "thanks a lot", "thank you so much"
+    ],
     "answer": "You're welcome!"
   },
   "sad": {
-    "question": ["I'm feeling low", "My mood is really low", "I feel like crying", "I'm down today"],
+    "question": [
+      "I'm feeling low", "My mood is really low", "I feel like crying", "I'm down today",
+      "I feel sad", "I'm unhappy", "I'm not okay", "I feel depressed"
+    ],
     "answer": "It's okay to feel low. Take a deep breath, you're stronger than you think."
   },
   "happy": {
-    "question": ["I feel so happy", "Today feels amazing", "I'm in a great mood today"],
+    "question": [
+      "I feel so happy", "Today feels amazing", "I'm in a great mood today",
+      "I'm feeling good", "I'm cheerful", "I feel awesome", "I'm really glad"
+    ],
     "answer": "That's amazing! Let's keep this vibe and make your day even brighter."
   },
   "anger": {
-    "question": ["I'm very irritated", "I'm really frustrated", "I'm losing my patience", "I feel annoyed", "I feel angry"],
+    "question": [
+      "I'm very irritated", "I'm really frustrated", "I'm losing my patience", "I feel annoyed", "I feel angry",
+      "I'm mad", "I'm upset", "I'm pissed off", "I'm furious"
+    ],
     "answer": "It's okay to feel angry. Let's slow down together - breathe in slowly, hold it, and let it go."
   },
   "surprised": {
-    "question": ["I'm shocked", "I can't believe what happened", "This was totally unexpected"],
+    "question": [
+      "I'm shocked", "I can't believe what happened", "This was totally unexpected",
+      "I'm surprised", "that blew my mind", "I'm astonished", "I'm amazed"
+    ],
     "answer": "Life can be full of surprises. Sometimes it brings growth - let's see the good side of it."
   }
 }
