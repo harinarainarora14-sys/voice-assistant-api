@@ -89,5 +89,18 @@
       "I'm surprised", "that blew my mind", "I'm astonished", "I'm amazed"
     ],
     "answer": "Life can be full of surprises. Sometimes it brings growth - let's see the good side of it."
+  },
+  "yes": {
+    "question": ["yes", "yeah", "yep", "sure", "of course"],
+    "answer": "Great! Let's continue."
+  },
+  "no": {
+    "question": ["no", "nope", "nah", "not really"],
+    "answer": "Okay, no problem. What else can I do for you?"
+  },
+  "maybe": {
+    "question": ["maybe", "not sure", "possibly", "could be"],
+    "answer": "Take your time, I'm here whenever you decide."
   }
 }
+
