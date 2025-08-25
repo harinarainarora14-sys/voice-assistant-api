@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -16,11 +16,11 @@ except Exception as e:
 
 app = FastAPI()
 
-# CORS middleware - allow your frontend (GitHub Pages or others)
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with your frontend URL for security
-    allow_credentials=False,  # Must be False when using "*"
+    allow_origins=["*"],  
+    allow_credentials=False,  
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,7 +43,7 @@ def ask(question: str = Query(...)):
             if question == q.lower().strip():
                 return process_answer(intent, question)
 
-    # --- Step 2: Fuzzy match (strict) ---
+    # --- Step 2: Fuzzy match ---
     best_match = None
     best_score = 0
     for intent, data in responses.items():
@@ -55,10 +55,10 @@ def ask(question: str = Query(...)):
 
     print(f"[DEBUG] Best match: {best_match}, Score: {best_score}")
 
-    if best_match and best_score >= 85:  # strict threshold
+    if best_match and best_score >= 85:
         return process_answer(best_match, question)
 
-    # --- Step 3: No match → Wikipedia fallback (only if question is longer) ---
+    # --- Step 3: No match → Wikipedia fallback for long questions ---
     if len(question.split()) >= 3:
         query = question.replace("tell me about", "").strip()
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
@@ -80,9 +80,12 @@ def process_answer(intent: str, question: str):
     """Handles the answer logic (time, wiki, or static)"""
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request
+    # Time request → return global UTC and also formatted hh:mm AM/PM
     if answer.upper() == "TIME":
-        return {"answer": datetime.now().strftime("%I:%M %p")}  # hh:mm AM/PM
+        now_utc = datetime.now(timezone.utc)
+        # Format in 12-hour hh:mm AM/PM
+        time_str = now_utc.strftime("%I:%M %p")
+        return {"answer": time_str, "type": "time_utc"}
 
     # Wikipedia request
     elif answer.upper() == "WIKIPEDIA":
@@ -101,3 +104,4 @@ def process_answer(intent: str, question: str):
     # Default static response
     else:
         return {"answer": answer}
+
