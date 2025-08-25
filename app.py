@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
+import string
 
 # Load responses
 try:
@@ -35,7 +36,9 @@ def ping():
 
 @app.get("/ask")
 def ask(question: str = Query(...)):
+    # Lowercase, strip spaces and trailing punctuation
     question = question.lower().strip()
+    question = question.rstrip(string.punctuation)
 
     # --- Step 1: Exact match ---
     for intent, data in responses.items():
@@ -80,11 +83,10 @@ def process_answer(intent: str, question: str):
     """Handles the answer logic (time, wiki, or static)"""
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → return global UTC and also formatted hh:mm AM/PM
+    # Time request → return 12-hour hh:mm AM/PM
     if answer.upper() == "TIME":
         now_utc = datetime.now(timezone.utc)
-        # Format in 12-hour hh:mm AM/PM
-        time_str = now_utc.strftime("%I:%M %p")
+        time_str = now_utc.strftime("%I:%M %p")  # 12-hour format
         return {"answer": time_str, "type": "time_utc"}
 
     # Wikipedia request
