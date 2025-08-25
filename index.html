@@ -10,80 +10,125 @@ html, body {
   height:100%; width:100%;
   font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
   background:#0a0a0a; color:#fff;
-  display:flex; flex-direction:column; overflow:hidden;
+  display:flex; flex-direction:column;
 }
+
+/* Mode buttons */
 #mode-bar {
-  display:flex; gap:6px; padding:10px; background:#111; border-bottom:1px solid #333;
+  display:flex; gap:6px; padding:10px;
+  background:#111; border-bottom:1px solid #333;
 }
 #mode-bar button {
-  flex:1; padding:12px; font-size:1rem; border-radius:8px; border:none;
-  background:#0077cc; color:#fff; cursor:pointer; transition:all 0.2s ease;
+  flex:1; padding:12px; font-size:1rem;
+  border-radius:8px; border:none;
+  background:#0077cc; color:#fff;
+  cursor:pointer; transition:all 0.2s ease;
 }
 #mode-bar button.active { background:#00aaff; }
+
+/* Chat area */
 #chat-container {
-  flex:1 1 auto; display:flex; flex-direction:column; padding:12px;
-  overflow-y:auto; background:#121212;
+  flex:1 1 auto; overflow-y:auto;
+  padding:12px; background:#121212;
+  margin-bottom:70px; /* space for fixed input on large screens */
 }
-.bubble { margin:6px 0; padding:12px 16px; border-radius:18px;
-  max-width:80%; word-wrap:break-word; font-size:1rem; line-height:1.4; transition:all 0.2s ease;
+.bubble {
+  margin:6px 0; padding:12px 16px; border-radius:18px;
+  max-width:80%; word-wrap:break-word;
+  font-size:1rem; line-height:1.4;
+  transition:all 0.2s ease;
 }
-.user { background:linear-gradient(45deg,#0077cc,#00aaff); color:#fff; margin-left:auto; text-align:right; box-shadow:0 4px 10px rgba(0,170,255,0.3);}
-.bot { background:#222; color:#fff; margin-right:auto; text-align:left; box-shadow:0 4px 10px rgba(255,255,255,0.05);}
-#text-mode, #voice-mode, #voice-cont-mode { flex-shrink:0; display:flex; gap:6px; padding:10px; background:#1a1a1a; border-top:1px solid #333; align-items:center; }
-#text-mode input { flex:1 1 auto; padding:14px 12px; font-size:1rem; border-radius:8px; border:none; background:#222; color:#fff; outline:none; }
-#text-mode button, #voice-mode button { flex-shrink:0; padding:14px 18px; font-size:1rem; border-radius:8px; border:none; background:#0077cc; color:#fff; cursor:pointer; }
-#text-mode button:hover, #voice-mode button:hover { background:#00aaff; transform:scale(1.05); }
+.user {
+  background:linear-gradient(45deg,#0077cc,#00aaff);
+  color:#fff; margin-left:auto; text-align:right;
+  box-shadow:0 4px 10px rgba(0,170,255,0.3);
+}
+.bot {
+  background:#222; color:#fff; margin-right:auto; text-align:left;
+  box-shadow:0 4px 10px rgba(255,255,255,0.05);
+}
+
+/* Input bars (default = fixed for tablets/desktop) */
+#text-mode, #voice-mode, #voice-cont-mode {
+  position:fixed; bottom:0; left:0; width:100%;
+  display:flex; gap:6px; padding:10px;
+  background:#1a1a1a; border-top:1px solid #333;
+  align-items:center; z-index:1000;
+}
+#text-mode input {
+  flex:1 1 auto; padding:14px 12px; font-size:1rem;
+  border-radius:8px; border:none; background:#222; color:#fff;
+  outline:none;
+}
+#text-mode button, #voice-mode button, #voice-cont-mode button {
+  flex-shrink:0; padding:12px 16px; font-size:1rem;
+  border-radius:8px; border:none; cursor:pointer;
+}
+#text-mode button:nth-child(2), #voice-mode button:first-child {
+  background:#0077cc; color:#fff;
+}
+#text-mode button:nth-child(2):hover, #voice-mode button:first-child:hover {
+  background:#00aaff; transform:scale(1.05);
+}
+#stopBtn, #stopBtnVoice, #stopBtnCont {
+  background:#cc0000; color:#fff;
+}
+#stopBtn:hover, #stopBtnVoice:hover, #stopBtnCont:hover {
+  background:#ff3333; transform:scale(1.05);
+}
+
+/* Scrollbar */
 #chat-container::-webkit-scrollbar { width:6px; }
 #chat-container::-webkit-scrollbar-thumb { background:#555; border-radius:3px; }
-#stopBtn {
-  padding:10px 14px; font-size:0.9rem; border-radius:50px; border:none;
-  background:#cc0000; color:#fff; cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,0.4);
-}
-#stopBtn:hover { background:#ff3333; transform:scale(1.05); }
-@media(max-width:480px){
-  .bubble{font-size:0.875rem;padding:8px 10px; max-width:90%;}
-  #text-mode input{font-size:0.875rem;}
-  #text-mode button,#voice-mode button,#stopBtn{font-size:0.875rem;padding:10px 12px; min-width:70px;}
+
+/* Phones: input bar adaptive (not fixed) */
+@media(max-width:768px){
+  #text-mode, #voice-mode, #voice-cont-mode {
+    position:relative; bottom:auto; left:auto; width:100%;
+  }
+  #chat-container { margin-bottom:0; }
+  .bubble { font-size:0.9rem; padding:8px 10px; max-width:90%; }
+  #text-mode input { font-size:0.9rem; }
+  #text-mode button, #voice-mode button { font-size:0.9rem; padding:10px 12px; }
 }
 </style>
 </head>
 <body>
 
+<!-- Mode Switch Bar -->
 <div id="mode-bar">
   <button id="textModeBtn" class="active" onclick="switchMode('text')">Text Mode</button>
   <button id="voiceBtn" onclick="switchMode('voice')">Voice Chat</button>
   <button id="voiceContBtn" onclick="switchMode('voice-cont')">Voice Continuous</button>
 </div>
 
+<!-- Chat Window -->
 <div id="chat-container"></div>
 
 <!-- Text Mode -->
 <div id="text-mode">
-  <input id="textInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+  <input id="textInput" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
   <button onclick="sendTextMessage()">Send</button>
-  <button id="stopBtn" onclick="stopVoice()" style="display:none;">Stop</button>
+  <button id="stopBtn" onclick="stopAll()">Stop</button>
 </div>
 
 <!-- Voice Chat Mode -->
 <div id="voice-mode" style="display:none;">
   <button onclick="startVoice()">Start Listening</button>
-  <button id="stopBtnVoice" onclick="stopVoice()" style="display:none;">Stop</button>
+  <button id="stopBtnVoice" onclick="stopAll()">Stop</button>
 </div>
 
 <!-- Voice Continuous Mode -->
 <div id="voice-cont-mode" style="display:none;">
   <span>Continuous listening active. Speak anytime.</span>
+  <button id="stopBtnCont" onclick="stopAll()">Stop</button>
 </div>
 
 <script>
 let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
 let speechEnabled = true, mic = null, utter = null, audioUnlocked=false;
-let micRecorder=null, audioChunks=[];
 let currentMode='text';
-
-// Safari detection
-function isSafari(){ return /^((?!chrome|android).)*safari/i.test(navigator.userAgent); }
 
 // Unlock audio for iOS
 document.body.addEventListener("click",()=>{
@@ -116,7 +161,7 @@ function addMessage(text,sender){
 
 function formatTime12Hour(){
   const now=new Date();
-  let h=now.getHours(); let m=now.getMinutes();
+  let h=now.getHours(), m=now.getMinutes();
   const ampm=h>=12?'PM':'AM'; h=h%12; if(h===0) h=12;
   return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} ${ampm}`;
 }
@@ -140,36 +185,21 @@ async function sendTextMessage(){
   } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
 }
 
-// VOICE CHAT BUTTON MODE
-async function startVoice(){
-  if(isSafari()){
-    // Safari fallback: MediaRecorder
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      micRecorder=new MediaRecorder(stream);
-      audioChunks=[];
-      micRecorder.ondataavailable=e=>{ if(e.data.size>0) audioChunks.push(e.data); };
-      micRecorder.onstop=()=>{ const audioBlob=new Blob(audioChunks,{type:"audio/webm"}); sendAudioToAPI(audioBlob); };
-      micRecorder.start();
-      addMessage("🎤 Listening... tap Stop when done","bot");
-      document.getElementById("stopBtnVoice").style.display="inline-block";
-    } catch(err){ console.error(err); addMessage("Could not access microphone.","bot"); }
-  } else {
-    if(!("webkitSpeechRecognition" in window)){ alert("Voice recognition not supported"); return; }
-    if(speechSynthesis.speaking) speechSynthesis.cancel();
-    if(mic) mic.stop();
-    mic=new webkitSpeechRecognition();
-    mic.lang="en-US"; mic.continuous=false; mic.interimResults=false;
-    mic.onresult=e=>{
-      const transcript=e.results[0][0].transcript;
-      addMessage(transcript,"user");
-      sendVoiceMessage(transcript);
-    };
-    mic.onerror=e=>console.error(e);
-    mic.onend=()=>{ mic=null; document.getElementById("stopBtnVoice").style.display="none"; };
-    mic.start();
-    document.getElementById("stopBtnVoice").style.display="inline-block";
-  }
+// VOICE CHAT MODE
+function startVoice(){
+  if(!("webkitSpeechRecognition" in window)){ alert("Voice recognition not supported"); return; }
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  if(mic) mic.stop();
+  mic=new webkitSpeechRecognition();
+  mic.lang="en-US"; mic.continuous=false; mic.interimResults=false;
+  mic.onresult=e=>{
+    const transcript=e.results[0][0].transcript;
+    addMessage(transcript,"user");
+    sendVoiceMessage(transcript);
+  };
+  mic.onerror=e=>console.error(e);
+  mic.onend=()=>{ mic=null; };
+  mic.start();
 }
 
 // VOICE CONTINUOUS MODE
@@ -204,39 +234,13 @@ async function sendVoiceMessage(text){
   } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
 }
 
-// SEND AUDIO TO API (Safari only)
-async function sendAudioToAPI(audioBlob){
-  const formData=new FormData();
-  formData.append("file",audioBlob,"voice.webm");
-  try{
-    const res=await fetch(apiBase+"/ask-audio",{method:"POST",body:formData});
-    const data=await res.json();
-    const transcript=data.transcript||"";
-    if(transcript){
-      addMessage(transcript,"user");
-      sendVoiceMessage(transcript);
-    } else { addMessage("No transcription received.","bot"); }
-  } catch(err){ console.error(err); addMessage("Error sending audio to API.","bot"); }
-}
+// STOP ALL
+function stopVoice(){ if(mic){ mic.onresult=null; mic.onerror=null; mic.stop(); mic=null; } }
+function stopAll(){ stopVoice(); if(speechSynthesis.speaking) speechSynthesis.cancel(); }
 
-// STOP MIC
-function stopVoice(){
-  if(micRecorder){
-    micRecorder.stop(); micRecorder=null;
-    document.getElementById("stopBtnVoice").style.display="none";
-  }
-  if(mic){
-    mic.onresult=null; mic.onerror=null; mic.stop(); mic=null;
-    document.getElementById("stopBtnVoice").style.display="none";
-  }
-}
-
-function speak(text){
-  if(speechSynthesis.speaking) speechSynthesis.cancel();
-  utter=new SpeechSynthesisUtterance(text);
-  speechSynthesis.speak(utter);
-}
+function speak(text){ if(speechSynthesis.speaking) speechSynthesis.cancel(); utter=new SpeechSynthesisUtterance(text); speechSynthesis.speak(utter);}
 </script>
 
 </body>
 </html>
+
