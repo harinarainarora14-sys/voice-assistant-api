@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo  # Built-in, no extra dependency
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -33,7 +33,7 @@ app.add_middleware(
 )
 
 # ------------------------
-# Helper: Wikipedia fetch with retry
+# Helper: Wikipedia fetch with retry & debug
 # ------------------------
 def fetch_wikipedia_summary(query: str):
     wiki_keywords = [
@@ -47,31 +47,41 @@ def fetch_wikipedia_summary(query: str):
             break
     q = re.sub(r"[^\w\s]", "", q).strip()
     if not q:
+        print("[DEBUG] Wikipedia query empty after cleaning")
         return ""
 
     # Try multiple times
-    for _ in range(2):
+    for attempt in range(2):
         try:
-            # Step 1: opensearch
+            print(f"[DEBUG] Wikipedia query attempt {attempt+1}: '{q}'")
+            # Step 1: opensearch to get exact title
             search_url = "https://en.wikipedia.org/w/api.php"
             params = {"action": "opensearch", "search": q, "limit": 1, "namespace": 0, "format": "json"}
             resp = requests.get(search_url, params=params, timeout=7)
             data = resp.json()
             titles = data[1]
             if not titles:
+                print("[DEBUG] No titles found on Wikipedia")
                 return ""
             title = titles[0]
+            print(f"[DEBUG] Wikipedia resolved title: '{title}'")
 
-            # Step 2: get summary
+            # Step 2: fetch summary
             summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title, safe='')}"
             resp2 = requests.get(summary_url, timeout=7)
             if resp2.status_code == 200:
                 extract = resp2.json().get("extract", "")
                 if extract:
+                    print("[DEBUG] Wikipedia summary found")
                     return extract
+                else:
+                    print("[DEBUG] Wikipedia summary empty")
+            else:
+                print(f"[DEBUG] Wikipedia summary request failed, status: {resp2.status_code}")
             # fallback: wait and retry
             time.sleep(1)
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"[DEBUG] Wikipedia request exception: {e}")
             time.sleep(1)
     return ""
 
@@ -133,4 +143,3 @@ def process_answer(intent: str, question: str):
 
     else:
         return {"answer": answer}
-
