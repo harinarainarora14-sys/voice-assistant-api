@@ -13,8 +13,7 @@ html, body {
   display:flex; flex-direction:column; overflow:hidden;
 }
 #mode-bar {
-  display:flex; gap:6px; padding:10px;
-  background:#111; border-bottom:1px solid #333;
+  display:flex; gap:6px; padding:10px; background:#111; border-bottom:1px solid #333;
 }
 #mode-bar button {
   flex:1; padding:12px; font-size:1rem; border-radius:8px; border:none;
@@ -25,63 +24,43 @@ html, body {
   flex:1 1 auto; display:flex; flex-direction:column; padding:12px;
   overflow-y:auto; background:#121212;
 }
-.bubble {
-  margin:6px 0; padding:12px 16px; border-radius:18px;
-  max-width:80%; word-wrap:break-word;
-  font-size:1rem; line-height:1.4;
-  transition:all 0.2s ease;
+.bubble { margin:6px 0; padding:12px 16px; border-radius:18px;
+  max-width:80%; word-wrap:break-word; font-size:1rem; line-height:1.4; transition:all 0.2s ease;
 }
-.user {
-  background:linear-gradient(45deg,#0077cc,#00aaff);
-  color:#fff; margin-left:auto; text-align:right;
-  box-shadow:0 4px 10px rgba(0,170,255,0.3);
-}
-.bot {
-  background:#222; color:#fff; margin-right:auto; text-align:left;
-  box-shadow:0 4px 10px rgba(255,255,255,0.05);
-}
+.user { background:linear-gradient(45deg,#0077cc,#00aaff); color:#fff; margin-left:auto; text-align:right; box-shadow:0 4px 10px rgba(0,170,255,0.3);}
+.bot { background:#222; color:#fff; margin-right:auto; text-align:left; box-shadow:0 4px 10px rgba(255,255,255,0.05);}
 #text-mode, #voice-mode, #voice-cont-mode {
-  flex-shrink:0; display:flex; gap:6px; padding:10px;
+  flex-shrink:0; display:flex; gap:6px; padding:10px; 
   background:#1a1a1a; border-top:1px solid #333; align-items:center;
 }
 #text-mode input {
-  flex:1 1 auto; padding:14px 12px; font-size:1rem;
+  flex:1 1 auto; padding:14px 12px; font-size:1rem; 
   border-radius:8px; border:none; background:#222; color:#fff; outline:none;
 }
-#text-mode button, #voice-mode button {
-  flex-shrink:0; padding:14px 18px; font-size:1rem;
-  border-radius:8px; border:none; background:#0077cc; color:#fff; cursor:pointer;
+#text-mode button, #voice-mode button, #voice-cont-mode button {
+  flex-shrink:0; padding:12px 16px; font-size:1rem;
+  border-radius:8px; border:none; cursor:pointer;
 }
-#text-mode button:hover, #voice-mode button:hover {
+#text-mode button.send, #voice-mode button.start {
+  background:#0077cc; color:#fff;
+}
+#text-mode button.send:hover, #voice-mode button.start:hover {
   background:#00aaff; transform:scale(1.05);
+}
+button.stop {
+  background:#cc0000; color:#fff;
+}
+button.stop:hover {
+  background:#ff3333; transform:scale(1.05);
 }
 #chat-container::-webkit-scrollbar { width:6px; }
 #chat-container::-webkit-scrollbar-thumb { background:#555; border-radius:3px; }
-
-/* Floating Stop Button */
-#stopBtn {
-  position:fixed;
-  top:55px;   /* right under the mode bar */
-  right:15px;
-  padding:10px 14px;
-  font-size:0.9rem;
-  border-radius:50px;
-  border:none;
-  background:#cc0000;
-  color:#fff;
-  cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,0.4);
-  z-index:2000;
-}
-#stopBtn:hover {
-  background:#ff3333;
-  transform:scale(1.05);
-}
-
 @media(max-width:480px){
   .bubble{font-size:0.875rem;padding:8px 10px; max-width:90%;}
   #text-mode input{font-size:0.875rem;}
-  #text-mode button,#voice-mode button{font-size:0.875rem;padding:10px 12px; min-width:70px;}
+  #text-mode button,#voice-mode button,#voice-cont-mode button{
+    font-size:0.875rem; padding:10px 12px; min-width:70px;
+  }
 }
 </style>
 </head>
@@ -93,25 +72,26 @@ html, body {
   <button id="voiceContBtn" onclick="switchMode('voice-cont')">Voice Continuous</button>
 </div>
 
-<!-- Floating Stop Button -->
-<button id="stopBtn" onclick="stopAll()">Stop</button>
-
 <div id="chat-container"></div>
 
 <!-- Text Mode -->
 <div id="text-mode">
-  <input id="textInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
-  <button onclick="sendTextMessage()">Send</button>
+  <input id="textInput" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+  <button class="send" onclick="sendTextMessage()">Send</button>
+  <button class="stop" onclick="stopAll()">Stop</button>
 </div>
 
 <!-- Voice Chat Mode -->
 <div id="voice-mode" style="display:none;">
-  <button onclick="startVoice()">Start Listening</button>
+  <button class="start" onclick="startVoice()">Start Listening</button>
+  <button class="stop" onclick="stopAll()">Stop</button>
 </div>
 
 <!-- Voice Continuous Mode -->
 <div id="voice-cont-mode" style="display:none;">
   <span>Continuous listening active. Speak anytime.</span>
+  <button class="stop" onclick="stopAll()">Stop</button>
 </div>
 
 <script>
@@ -121,10 +101,7 @@ let currentMode='text';
 
 // Unlock audio for iOS
 document.body.addEventListener("click",()=>{
-  if(!audioUnlocked){
-    speechSynthesis.speak(new SpeechSynthesisUtterance("Voice assistant activated"));
-    audioUnlocked=true;
-  }
+  if(!audioUnlocked){ speechSynthesis.speak(new SpeechSynthesisUtterance("Voice assistant activated")); audioUnlocked=true;}
 },{once:true});
 
 function switchMode(mode){
@@ -148,10 +125,10 @@ function addMessage(text,sender){
   container.scrollTop=container.scrollHeight;
 }
 
-function formatTime12Hour(){
-  const now=new Date(); let h=now.getHours(); let m=now.getMinutes();
-  const ampm=h>=12?'PM':'AM'; h=h%12; if(h===0) h=12;
-  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} ${ampm}`;
+function formatTime12Hour(){ 
+  const now=new Date(); let h=now.getHours(); let m=now.getMinutes(); 
+  const ampm=h>=12?'PM':'AM'; h=h%12; if(h===0) h=12; 
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} ${ampm}`; 
 }
 
 // TEXT MODE
@@ -222,22 +199,10 @@ async function sendVoiceMessage(text){
   } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
 }
 
-// STOP MIC
-function stopVoice(){
-  if(mic){ mic.onresult=null; mic.onerror=null; mic.stop(); mic=null; }
-}
-
-// STOP ALL
-function stopAll(){
-  if(speechSynthesis.speaking) speechSynthesis.cancel();
-  stopVoice();
-}
-
-function speak(text){
-  if(speechSynthesis.speaking) speechSynthesis.cancel();
-  utter=new SpeechSynthesisUtterance(text);
-  speechSynthesis.speak(utter);
-}
+// STOP MIC & SPEECH
+function stopVoice(){ if(mic){ mic.onresult=null; mic.onerror=null; mic.stop(); mic=null; } }
+function stopAll(){ stopVoice(); if(speechSynthesis.speaking) speechSynthesis.cancel(); }
+function speak(text){ if(speechSynthesis.speaking) speechSynthesis.cancel(); utter=new SpeechSynthesisUtterance(text); speechSynthesis.speak(utter);}
 </script>
 
 </body>
