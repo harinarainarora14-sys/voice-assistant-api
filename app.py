@@ -2,11 +2,11 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo  # Built-in, no extra dependency
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
 import string
-import pytz
 
 # ------------------------
 # Load responses
@@ -26,8 +26,8 @@ app = FastAPI()
 # CORS middleware to allow frontend access globally
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
-    allow_credentials=False,  
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -110,7 +110,7 @@ def process_answer(intent: str, question: str):
 
     # Time request → Indian local time 12-hour format
     if answer.upper() == "TIME":
-        india_tz = pytz.timezone("Asia/Kolkata")
+        india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
         time_str = now_india.strftime("%I:%M %p")  # 12-hour format
         return {"answer": time_str, "type": "time_india"}
