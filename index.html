@@ -18,11 +18,12 @@
     overflow: hidden;
   }
 
+  /* Chat container fills remaining space above input bar */
   #chat-container {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 12px;
     overflow-y: auto;
     background: #121212;
   }
@@ -54,19 +55,21 @@
     box-shadow: 0 4px 10px rgba(255,255,255,0.05);
   }
 
+  /* Input bar pinned at bottom */
   #input-bar {
+    flex-shrink: 0;
     display: flex;
-    flex-wrap: wrap;
     gap: 6px;
-    padding: 6px;
+    padding: 10px;
     background: #1a1a1a;
     border-top: 1px solid #333;
     align-items: center;
+    width: 100%;
   }
 
   #input-bar input {
-    flex: 1 1 100%;
-    padding: 10px;
+    flex: 1 1 auto;
+    padding: 12px;
     font-size: 1rem;
     border-radius: 8px;
     border: none;
@@ -81,14 +84,14 @@
 
   #input-bar button {
     flex: 1 1 auto;
-    padding: 10px 12px;
-    font-size: 0.9rem;
+    padding: 12px 16px;
+    font-size: 0.95rem;
     border-radius: 8px;
     border: none;
     background: #0077cc;
     color: #fff;
     cursor: pointer;
-    min-width: 70px;
+    min-width: 80px;
     transition: all 0.2s ease;
     white-space: nowrap;
   }
@@ -111,7 +114,7 @@
     #input-bar input { font-size: 0.95rem; }
   }
 
-  /* iPad 9th Generation / tablet layout */
+  /* iPad 9th Generation layout */
   @media (min-width: 768px) and (max-width: 1620px) {
     html, body {
       height: 100vh;
@@ -122,7 +125,7 @@
     #chat-container {
       padding: 12px;
       max-width: 100%;
-      flex: 1;
+      flex: 1 1 auto;
     }
 
     .bubble {
@@ -174,7 +177,6 @@
 </div>
 
 <script>
-let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
 let voiceEnabled = true;
 let speechEnabled = true;
 let mic = null;
@@ -216,7 +218,6 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Stop ongoing speech
   if (speechSynthesis.speaking) speechSynthesis.cancel();
   stopVoice();
 
@@ -229,9 +230,8 @@ async function sendMessage() {
     if (text.toLowerCase().includes("time")) {
       answerText = formatTime12Hour();
     } else {
-      const res = await fetch(apiBase + "/ask?question=" + encodeURIComponent(text));
-      const data = await res.json();
-      answerText = (data && data.answer) ? data.answer : "No answer received from API";
+      // Dummy response for testing
+      answerText = "This is a dummy response from the assistant.";
     }
 
     addMessage(answerText, "bot");
@@ -292,7 +292,3 @@ function speak(text) {
 
 document.getElementById("input").addEventListener("focus", () => {
   if (voiceEnabled) startVoice();
-});
-</script>
-</body>
-</html>
