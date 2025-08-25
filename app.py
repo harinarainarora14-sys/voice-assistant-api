@@ -58,18 +58,22 @@ def ask(question: str = Query(...)):
     if best_match and best_score >= 85:  # strict threshold
         return process_answer(best_match, question)
 
-    # --- Step 3: No match → Wikipedia fallback ---
-    query = question.replace("tell me about", "").strip()
-    url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-    try:
-        resp = requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            return {"answer": data.get("extract", "No summary found.")}
-        else:
-            return {"answer": "I couldn't find anything on Wikipedia."}
-    except requests.exceptions.RequestException:
-        return {"answer": "Sorry, there was an error accessing Wikipedia."}
+    # --- Step 3: No match → Wikipedia fallback (only if question is longer) ---
+    if len(question.split()) >= 3:
+        query = question.replace("tell me about", "").strip()
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        try:
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                return {"answer": data.get("extract", "No summary found.")}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
+        except requests.exceptions.RequestException:
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
+
+    # --- Step 4: No valid fallback ---
+    return {"answer": f"Sorry, I don't understand '{question}'."}
 
 
 def process_answer(intent: str, question: str):
