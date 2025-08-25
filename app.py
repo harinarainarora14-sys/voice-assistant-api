@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Standard library
+from zoneinfo import ZoneInfo  # Built-in
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -23,6 +23,7 @@ except Exception as e:
 # ------------------------
 app = FastAPI()
 
+# CORS middleware to allow frontend access globally
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -69,7 +70,7 @@ def ask(question: str = Query(...)):
     if best_match and best_score >= 85:
         return process_answer(best_match, question)
 
-    # --- Step 3: Wikipedia fallback for long questions ---
+    # --- Step 3: Wikipedia fallback ---
     if len(question.split()) >= 3:
         wiki_keywords = [
             "tell me about", "who is", "what is", "search for",
@@ -82,25 +83,19 @@ def ask(question: str = Query(...)):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        print(f"[DEBUG] Wikipedia URL: {url}")  # Debug log
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
-            resp = requests.get(url, timeout=5)
-            print(f"[DEBUG] HTTP status: {resp.status_code}")  # Debug log
+            resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
-                try:
-                    data = resp.json()
-                    extract = data.get("extract", "")
-                    if extract:
-                        return {"answer": extract}
-                    else:
-                        return {"answer": "I couldn't find anything on Wikipedia."}
-                except json.JSONDecodeError as e:
-                    print(f"[DEBUG] JSON decode error: {e}")
+                data = resp.json()
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
                     return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException as e:
-            print(f"[DEBUG] Wikipedia request exception: {e}")
+        except requests.exceptions.RequestException:
             return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
     # --- Step 4: No match ---
@@ -112,11 +107,11 @@ def ask(question: str = Query(...)):
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → Indian local time
+    # Time request → Indian local time 12-hour format
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
-        time_str = now_india.strftime("%I:%M %p")  # 12-hour format
+        time_str = now_india.strftime("%I:%M %p")
         return {"answer": time_str, "type": "time_india"}
 
     # Wikipedia request
@@ -132,28 +127,23 @@ def process_answer(intent: str, question: str):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        print(f"[DEBUG] Wikipedia URL (process_answer): {url}")
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
-            resp = requests.get(url, timeout=5)
-            print(f"[DEBUG] HTTP status (process_answer): {resp.status_code}")
+            resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
-                try:
-                    data = resp.json()
-                    extract = data.get("extract", "")
-                    if extract:
-                        return {"answer": extract}
-                    else:
-                        return {"answer": "I couldn't find anything on Wikipedia."}
-                except json.JSONDecodeError as e:
-                    print(f"[DEBUG] JSON decode error (process_answer): {e}")
+                data = resp.json()
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
                     return {"answer": "I couldn't find anything on Wikipedia."}
             else:
                 return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException as e:
-            print(f"[DEBUG] Wikipedia request exception (process_answer): {e}")
+        except requests.exceptions.RequestException:
             return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
     # Default static response
     else:
         return {"answer": answer}
+
 
