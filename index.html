@@ -1,99 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Assistant</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    #conversation {
-      width: 90%;
-      max-width: 600px;
-      margin: auto;
-      padding: 10px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      height: 300px;
-      overflow-y: auto;
-      text-align: left;
-    }
-    .user { color: blue; margin: 5px 0; }
-    .assistant { color: green; margin: 5px 0; }
-    input, button {
-      margin-top: 15px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    button {
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice & Text Assistant</title>
+<style>
+* { box-sizing: border-box; margin:0; padding:0; }
+html, body {
+  height:100%; width:100%;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+  background:#0a0a0a; color:#fff;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#mode-bar {
+  display:flex; gap:6px; padding:10px; background:#111; border-bottom:1px solid #333;
+}
+#mode-bar button {
+  flex:1; padding:12px; font-size:1rem; border-radius:8px; border:none;
+  background:#0077cc; color:#fff; cursor:pointer; transition:all 0.2s ease;
+}
+#mode-bar button.active { background:#00aaff; }
+#chat-container {
+  flex:1 1 auto; display:flex; flex-direction:column; padding:12px;
+  overflow-y:auto; background:#121212;
+}
+.bubble { margin:6px 0; padding:12px 16px; border-radius:18px;
+  max-width:80%; word-wrap:break-word; font-size:1rem; line-height:1.4; transition:all 0.2s ease;
+}
+.user { background:linear-gradient(45deg,#0077cc,#00aaff); color:#fff; margin-left:auto; text-align:right; box-shadow:0 4px 10px rgba(0,170,255,0.3);}
+.bot { background:#222; color:#fff; margin-right:auto; text-align:left; box-shadow:0 4px 10px rgba(255,255,255,0.05);}
+#text-mode, #voice-mode, #voice-cont-mode {
+  flex-shrink:0; display:flex; gap:6px; padding:10px;
+  background:#1a1a1a; border-top:1px solid #333; align-items:center;
+}
+#text-mode input {
+  flex:1 1 auto; padding:14px 12px; font-size:1rem;
+  border-radius:8px; border:none; background:#222; color:#fff; outline:none;
+}
+#text-mode button, #voice-mode button, #voice-cont-mode button {
+  flex-shrink:0; padding:14px 18px; font-size:1rem; border-radius:8px; border:none;
+  background:#0077cc; color:#fff; cursor:pointer;
+}
+#text-mode button:hover, #voice-mode button:hover, #voice-cont-mode button:hover {
+  background:#00aaff; transform:scale(1.05);
+}
+#chat-container::-webkit-scrollbar { width:6px; }
+#chat-container::-webkit-scrollbar-thumb { background:#555; border-radius:3px; }
+
+/* Floating Stop Button */
+#stopBtn {
+  position:fixed; bottom:15px; right:15px;
+  padding:14px 20px; font-size:1rem;
+  border-radius:50px; border:none;
+  background:#cc0000; color:#fff; cursor:pointer;
+  box-shadow:0 4px 10px rgba(0,0,0,0.4);
+  z-index:1000; transition:all 0.2s ease;
+}
+#stopBtn:hover { background:#ff3333; transform:scale(1.05); }
+
+@media(max-width:480px){
+  .bubble{font-size:0.875rem;padding:8px 10px; max-width:90%;}
+  #text-mode input{font-size:0.875rem;}
+  #text-mode button,#voice-mode button,#voice-cont-mode button,#stopBtn{
+    font-size:0.875rem;padding:10px 14px;
+  }
+}
+</style>
 </head>
 <body>
-  <h1>Voice Assistant</h1>
-  <div id="conversation"></div>
 
-  <input id="userInput" type="text" placeholder="Ask me something...">
-  <button onclick="sendMessage()">Send</button>
+<div id="mode-bar">
+  <button id="textModeBtn" class="active" onclick="switchMode('text')">Text Mode</button>
+  <button id="voiceBtn" onclick="switchMode('voice')">Voice Chat</button>
+  <button id="voiceContBtn" onclick="switchMode('voice-cont')">Voice Continuous</button>
+</div>
 
-  <div>
-    <button onclick="startRecording()">🎙️</button>
-    <button onclick="stopRecording()">🔊</button>
-  </div>
+<div id="chat-container"></div>
 
-  <p>API URL: <input id="apiUrl" type="text" size="50" value="https://voice-assistant-api.onrender.com"></p>
+<!-- Text Mode -->
+<div id="text-mode">
+  <input id="textInput" placeholder="Type your message..." 
+         onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+  <button onclick="sendTextMessage()">Send</button>
+</div>
 
-  <script>
-    function appendMessage(sender, message) {
-      const convo = document.getElementById("conversation");
-      const div = document.createElement("div");
-      div.className = sender;
-      div.textContent = sender + ": " + message;
-      convo.appendChild(div);
-      convo.scrollTop = convo.scrollHeight;
+<!-- Voice Chat Mode -->
+<div id="voice-mode" style="display:none;">
+  <button onclick="startVoice()">Start Listening</button>
+</div>
+
+<!-- Voice Continuous Mode -->
+<div id="voice-cont-mode" style="display:none;">
+  <span>Continuous listening active. Speak anytime.</span>
+</div>
+
+<!-- Floating Stop Button -->
+<button id="stopBtn" onclick="stopAll()">Stop</button>
+
+<script>
+let apiBase = localStorage.getItem("apiUrl") || "https://voice-assistant-api-yya9.onrender.com";
+let speechEnabled = true, mic = null, utter = null, audioUnlocked=false;
+let currentMode='text';
+
+// Unlock audio for iOS
+document.body.addEventListener("click",()=>{
+  if(!audioUnlocked){ speechSynthesis.speak(new SpeechSynthesisUtterance("Voice assistant activated")); audioUnlocked=true;}
+},{once:true});
+
+function switchMode(mode){
+  currentMode=mode;
+  document.getElementById('text-mode').style.display=mode==='text'?'flex':'none';
+  document.getElementById('voice-mode').style.display=mode==='voice'?'flex':'none';
+  document.getElementById('voice-cont-mode').style.display=mode==='voice-cont'?'flex':'none';
+  document.getElementById('textModeBtn').classList.toggle('active',mode==='text');
+  document.getElementById('voiceBtn').classList.toggle('active',mode==='voice');
+  document.getElementById('voiceContBtn').classList.toggle('active',mode==='voice-cont');
+  stopVoice();
+  if(mode==='voice-cont') startContinuousVoice();
+}
+
+function addMessage(text,sender){
+  const container=document.getElementById("chat-container");
+  const msg=document.createElement("div");
+  msg.className="bubble "+sender;
+  msg.innerText=text;
+  container.appendChild(msg);
+  container.scrollTop=container.scrollHeight;
+}
+
+function formatTime12Hour(){
+  const now=new Date();
+  let h=now.getHours(); let m=now.getMinutes();
+  const ampm=h>=12?'PM':'AM';
+  h=h%12; if(h===0) h=12;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')} ${ampm}`;
+}
+
+// TEXT MODE
+async function sendTextMessage(){
+  const input=document.getElementById("textInput");
+  const text=input.value.trim(); if(!text) return;
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  stopVoice();
+  addMessage(text,"user"); input.value="";
+  try{
+    let answerText=text.toLowerCase().includes("time")?formatTime12Hour():"";
+    if(!answerText){
+      const res=await fetch(apiBase+"/ask?question="+encodeURIComponent(text));
+      const data=await res.json();
+      answerText=(data && data.answer)?data.answer:"No answer received from API";
     }
+    addMessage(answerText,"bot");
+    if(audioUnlocked && speechEnabled) speak(answerText);
+  } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
+}
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const apiUrl = document.getElementById("apiUrl").value;
-      const message = input.value.trim();
-      if (!message) return;
+// VOICE CHAT BUTTON MODE
+function startVoice(){
+  if(!("webkitSpeechRecognition" in window)){ alert("Voice recognition not supported"); return; }
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  if(mic) mic.stop();
+  mic=new webkitSpeechRecognition();
+  mic.lang="en-US"; mic.continuous=false; mic.interimResults=false;
+  mic.onresult=e=>{
+    const transcript=e.results[0][0].transcript;
+    addMessage(transcript,"user");
+    sendVoiceMessage(transcript);
+  };
+  mic.onerror=e=>console.error(e);
+  mic.onend=()=>{ mic=null; };
+  mic.start();
+}
 
-      appendMessage("You", message);
-      input.value = "";
-
-      try {
-        const res = await fetch(apiUrl + "/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message })
-        });
-        const data = await res.json();
-        appendMessage("Assistant", data.reply || "No response");
-      } catch (err) {
-        appendMessage("Assistant", "Error: " + err.message);
+// VOICE CONTINUOUS MODE
+function startContinuousVoice(){
+  if(!("webkitSpeechRecognition" in window)){ alert("Voice recognition not supported"); return; }
+  if(mic) mic.stop();
+  mic=new webkitSpeechRecognition();
+  mic.lang="en-US"; mic.continuous=true; mic.interimResults=false;
+  mic.onresult=e=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){
+        const transcript=e.results[i][0].transcript;
+        addMessage(transcript,"user");
+        sendVoiceMessage(transcript);
       }
     }
+  };
+  mic.onerror=e=>console.error(e);
+  mic.onend=()=>{ if(currentMode==='voice-cont') mic.start(); else mic=null; };
+  mic.start();
+}
 
-    function startRecording() {
-      appendMessage("System", "🎙️ Recording started...");
-      // recording logic
-    }
+// SEND VOICE TO API
+async function sendVoiceMessage(text){
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  try{
+    const res=await fetch(apiBase+"/ask?question="+encodeURIComponent(text));
+    const data=await res.json();
+    const answer=(data && data.answer)?data.answer:"No answer received from API";
+    addMessage(answer,"bot");
+    if(audioUnlocked && speechEnabled) speak(answer);
+  } catch(err){ console.error(err); addMessage("Error connecting to API","bot"); }
+}
 
-    function stopRecording() {
-      appendMessage("System", "🔊 Recording stopped.");
-      // stop recording logic
-    }
-  </script>
+// STOP MIC
+function stopVoice(){
+  if(mic){ mic.onresult=null; mic.onerror=null; mic.stop(); mic=null; }
+}
+
+// STOP ALL (speech + mic)
+function stopAll(){
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  stopVoice();
+}
+
+function speak(text){
+  if(speechSynthesis.speaking) speechSynthesis.cancel();
+  utter=new SpeechSynthesisUtterance(text);
+  speechSynthesis.speak(utter);
+}
+</script>
+
 </body>
 </html>
