@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
 import json
-from datetime import datetime, timezone
-from fuzzywuzzy import fuzz
+import sounddevice as sd
+import numpy as np
+from vosk import Model, KaldiRecognizer
+import queue
+import threading
 import requests
+import pyttsx3
 from urllib.parse import quote
-import string
 
-# Load responses
+# ------------------------
+# Load responses (for local fallback)
+# ------------------------
 try:
     with open("responses.json", "r") as f:
         responses = json.load(f)
@@ -15,95 +18,98 @@ except Exception as e:
     print("⚠️ Error loading responses.json:", e)
     responses = {}
 
-app = FastAPI()
+# ------------------------
+# Initialize TTS engine
+# ------------------------
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)  # Speaking speed
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  
-    allow_credentials=False,  
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ------------------------
+# Globals for continuous listening
+# ------------------------
+audio_queue = queue.Queue()
+stop_flag = False
 
-@app.get("/")
-def home():
-    return {"message": "✅ Voice Assistant API is running"}
+# ------------------------
+# Audio callback for microphone
+# ------------------------
+def audio_callback(indata, frames, time, status):
+    audio_queue.put(bytes(indata))
 
-@app.get("/ping")
-def ping():
-    return {"message": "pong"}
+# ------------------------
+# Ask API function
+# ------------------------
+API_URL = "http://127.0.0.1:8000/ask"  # Replace with your deployed API
 
-@app.get("/ask")
-def ask(question: str = Query(...)):
-    # Lowercase, strip spaces and trailing punctuation
-    question = question.lower().strip()
-    question = question.rstrip(string.punctuation)
+def ask_api(question):
+    try:
+        resp = requests.get(API_URL, params={"question": question}, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            answer = data.get("answer", "Sorry, I don't understand that.")
+            print("Assistant:", answer)
+            engine.say(answer)
+            engine.runAndWait()
+        else:
+            engine.say("Sorry, the server didn't respond properly.")
+            engine.runAndWait()
+    except requests.exceptions.RequestException:
+        engine.say("Sorry, I could not connect to the server.")
+        engine.runAndWait()
 
-    # --- Step 1: Exact match ---
-    for intent, data in responses.items():
-        for q in data.get("question", []):
-            if question == q.lower().strip():
-                return process_answer(intent, question)
+# ------------------------
+# Continuous listening loop
+# ------------------------
+def continuous_listen(model_path="model"):
+    global stop_flag
+    stop_flag = False
+    model = Model(model_path)
+    rec = KaldiRecognizer(model, 16000)
+    print("🎙️ Continuous mode started. Say 'stop' to end...")
 
-    # --- Step 2: Fuzzy match ---
-    best_match = None
-    best_score = 0
-    for intent, data in responses.items():
-        for q in data.get("question", []):
-            score = fuzz.ratio(question, q.lower())
-            if score > best_score:
-                best_score = score
-                best_match = intent
+    with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
+                           channels=1, callback=audio_callback):
+        while not stop_flag:
+            data = audio_queue.get()
+            if rec.AcceptWaveform(data):
+                result = json.loads(rec.Result())
+                text = result.get("text", "").strip()
+                if text:
+                    print("You:", text)
+                    if "stop" in text.lower():
+                        stop_flag = True
+                        print("🛑 Continuous mode stopped by user.")
+                        break
+                    # Ask API asynchronously
+                    threading.Thread(target=ask_api, args=(text,), daemon=True).start()
 
-    print(f"[DEBUG] Best match: {best_match}, Score: {best_score}")
+# ------------------------
+# Single question voice mode
+# ------------------------
+def single_listen(model_path="model"):
+    model = Model(model_path)
+    rec = KaldiRecognizer(model, 16000)
+    print("🎙️ Say something...")
+    with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
+                           channels=1, callback=audio_callback):
+        data = audio_queue.get()
+        if rec.AcceptWaveform(data):
+            result = json.loads(rec.Result())
+            text = result.get("text", "").strip()
+            if text:
+                print("You:", text)
+                ask_api(text)
 
-    if best_match and best_score >= 85:
-        return process_answer(best_match, question)
-
-    # --- Step 3: No match → Wikipedia fallback for long questions ---
-    if len(question.split()) >= 3:
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # --- Step 4: No valid fallback ---
-    return {"answer": f"Sorry, I don't understand '{question}'."}
-
-
-def process_answer(intent: str, question: str):
-    """Handles the answer logic (time, wiki, or static)"""
-    answer = responses[intent].get("answer", "Sorry, I don't understand that.")
-
-    # Time request → return 12-hour hh:mm AM/PM
-    if answer.upper() == "TIME":
-        now_utc = datetime.now(timezone.utc)
-        time_str = now_utc.strftime("%I:%M %p")  # 12-hour format
-        return {"answer": time_str, "type": "time_utc"}
-
-    # Wikipedia request
-    elif answer.upper() == "WIKIPEDIA":
-        query = question.replace("tell me about", "").strip()
-        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        try:
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"answer": data.get("extract", "No summary found.")}
-            else:
-                return {"answer": "I couldn't find anything on Wikipedia."}
-        except requests.exceptions.RequestException:
-            return {"answer": "Sorry, there was an error accessing Wikipedia."}
-
-    # Default static response
+# ------------------------
+# Main entry point
+# ------------------------
+if __name__ == "__main__":
+    print("Select mode: 1 = Single voice, 2 = Continuous voice")
+    mode = input("Mode: ").strip()
+    if mode == "1":
+        single_listen()
+    elif mode == "2":
+        continuous_listen()
     else:
-        return {"answer": answer}
+        print("Invalid mode selected.")
 
