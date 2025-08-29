@@ -294,7 +294,7 @@
     "answer": "Session-based personalization can evolve into long-term learning."
   },
   "school_office_use": {
-    "question": ["can it be used in schools or offices", "institutional use?"],
+    "question": ["can it be used in schools or offices", "institutional use?"], 
     "answer": "Yes, it can improve productivity and mental well-being in structured environments."
   },
   "AI_improvement": {
@@ -314,4 +314,3 @@
     "answer": "Creating a responsive voice assistant that understands mood and interacts naturally."
   }
 }
-
