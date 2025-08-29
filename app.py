@@ -9,12 +9,6 @@ from urllib.parse import quote
 import string
 
 # ------------------------
-# Gemini API key
-# ------------------------
-GEMINI_API_KEY = "AIzaSyB4oYXN34edV8imQd7A_pYxuSSm9Hl5sso"
-GEMINI_URL = "https://api.gemini.com/v1/ask"  # replace with actual Gemini API URL if different
-
-# ------------------------
 # Load responses
 # ------------------------
 try:
@@ -28,6 +22,8 @@ except Exception as e:
 # Initialize FastAPI
 # ------------------------
 app = FastAPI()
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -48,27 +44,41 @@ def ping():
     return {"message": "pong"}
 
 # ------------------------
-# Ask endpoint
+# Gemini API function
+# ------------------------
+def call_gemini_api(question: str):
+    api_key = "AIzaSyB4oYXN34edV8imQd7A_pYxuSSm9Hl5sso"
+    url = "https://gemini.googleapis.com/v1/responses:generate"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "gemini-1.5",
+        "prompt": question,
+        "temperature": 0.7,
+        "max_output_tokens": 500
+    }
+    try:
+        resp = requests.post(url, json=data, headers=headers, timeout=10)
+        resp.raise_for_status()
+        result = resp.json()
+        return result.get("candidates", [{}])[0].get("content", "No response from Gemini.")
+    except Exception as e:
+        return f"Gemini API error: {e}"
+
+# ------------------------
+# Main ask endpoint
 # ------------------------
 @app.get("/ask")
-def ask(question: str = Query(...), use_gemini: bool = Query(False)):
+def ask(question: str = Query(...), use_gemini: bool = False):
     question = question.lower().strip()
     question = question.rstrip(string.punctuation + "!?")
 
-    # Use Gemini API if requested
+    # --- Step 0: Use Gemini API if requested ---
     if use_gemini:
-        try:
-            headers = {"Authorization": f"Bearer {GEMINI_API_KEY}"}
-            payload = {"question": question}
-            resp = requests.post(GEMINI_URL, json=payload, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                answer = data.get("answer") or "Gemini API returned no answer."
-                return {"answer": answer}
-            else:
-                return {"answer": f"Gemini API error: {resp.status_code}"}
-        except Exception as e:
-            return {"answer": f"Gemini API request failed: {e}"}
+        answer = call_gemini_api(question)
+        return {"answer": answer}
 
     # --- Step 1: Exact match ---
     for intent, data in responses.items():
@@ -102,7 +112,7 @@ def ask(question: str = Query(...), use_gemini: bool = Query(False)):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        headers = {"User-Agent": "VoiceAssistant/1.0"}
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
             resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
@@ -110,24 +120,30 @@ def ask(question: str = Query(...), use_gemini: bool = Query(False)):
                 extract = data.get("extract", "")
                 if extract:
                     return {"answer": extract}
-            return {"answer": "I couldn't find anything on Wikipedia."}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
         except requests.exceptions.RequestException:
-            return {"answer": "Error accessing Wikipedia."}
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
+    # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
 
 # ------------------------
-# Answer processing
+# Process answers
 # ------------------------
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
+    # TIME request
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
         time_str = now_india.strftime("%I:%M %p")
         return {"answer": time_str, "type": "time_india"}
 
+    # WIKIPEDIA request
     elif answer.upper() == "WIKIPEDIA":
         wiki_keywords = [
             "tell me about", "who is", "what is", "search for",
@@ -140,7 +156,7 @@ def process_answer(intent: str, question: str):
                 break
 
         url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
-        headers = {"User-Agent": "VoiceAssistant/1.0"}
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
             resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
@@ -148,9 +164,14 @@ def process_answer(intent: str, question: str):
                 extract = data.get("extract", "")
                 if extract:
                     return {"answer": extract}
-            return {"answer": "I couldn't find anything on Wikipedia."}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
         except requests.exceptions.RequestException:
-            return {"answer": "Error accessing Wikipedia."}
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
+    # Default static response
     else:
         return {"answer": answer}
+
