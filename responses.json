@@ -1,18 +1,267 @@
 {
   "greeting": {
-    "question": ["hello", "hi", "hey", "good morning", "good afternoon", "good evening"],
+    "question": [ "hello", "hi", "hey", "good morning", "good afternoon", "good evening", "hiya", "yo", "sup", "howdy", "greetings", "hey there", "hi there" ],
     "answer": "Hello! How can I help you today?"
   },
   "goodbye": {
-    "question": ["bye", "goodbye", "see you", "talk later"],
-    "answer": "Goodbye! Have a great day!"
+    "question": [ "bye", "goodbye", "see you", "quit", "exit", "see you later", "catch you later", "talk to you soon", "farewell", "bye bye", "later" ],
+    "answer": "Goodbye! Have a nice day."
   },
-  "time_request": {
-    "question": ["what time is it", "tell me the time", "current time"],
+  "time": {
+    "question": [ "what time is it", "current time", "tell me the time", "do you know the time", "can you tell me the time", "what's the time now", "time please", "could you tell me the time" ],
     "answer": "TIME"
   },
-  "wiki_request": {
-    "question": ["tell me about", "who is", "what is", "explain", "give me information on"],
+  "wikipedia": {
+    "question": [ "tell me about", "who is", "what is", "search for", "give me information on", "explain", "tell me something about", "find info about", "look up", "show me info about" ],
     "answer": "WIKIPEDIA"
+  },
+  "your_name": {
+    "question": [ "what is your name", "who are you", "tell me your name", "may I know your name", "do you have a name", "what should I call you", "name please", "could you tell me your name" ],
+    "answer": "I am your voice assistant."
+  },
+  "how_are_you": {
+    "question": [ "how are you", "how's it going", "how do you do", "are you doing okay", "how are things", "what's up with you", "how you feeling", "everything good" ],
+    "answer": "I am doing great! How about you?"
+  },
+  "joke": {
+    "question": [ "tell me a joke", "make me laugh", "say something funny", "got any jokes", "make me smile", "give me a joke", "funny joke", "say a joke" ],
+    "answer": "Why did the computer go to the doctor? Because it caught a virus!"
+  },
+  "motivation": {
+    "question": [ "motivate me", "i need motivation", "inspire me", "say something positive", "give me motivation", "lift me up", "encourage me", "cheer me up" ],
+    "answer": "Believe in yourself! Every day is a new opportunity to grow and succeed."
+  },
+  "thanks": {
+    "question": [ "thanks", "thank you", "thx", "appreciate it", "thanks a lot", "thank you so much", "many thanks", "thanks buddy" ],
+    "answer": "You're welcome!"
+  },
+  "sad": {
+    "question": [ "I'm feeling low", "My mood is really low", "I feel like crying", "I'm down today", "I feel sad", "I'm unhappy", "I'm not okay", "I feel depressed", "feeling blue", "I feel terrible" ],
+    "answer": "It's okay to feel low. Take a deep breath, you're stronger than you think."
+  },
+  "happy": {
+    "question": [ "I feel so happy", "Today feels amazing", "I'm in a great mood today", "I'm feeling good", "I'm cheerful", "I feel awesome", "I'm really glad", "I feel fantastic", "I'm joyful" ],
+    "answer": "That's amazing! Let's keep this vibe and make your day even brighter."
+  },
+  "anger": {
+    "question": [ "I'm very irritated", "I'm really frustrated", "I'm losing my patience", "I feel annoyed", "I feel angry", "I'm mad", "I'm upset", "I'm pissed off", "I'm furious", "angry", "so annoyed" ],
+    "answer": "It's okay to feel angry. Let's slow down together - breathe in slowly, hold it, and let it go."
+  },
+  "surprised": {
+    "question": [ "I'm shocked", "I can't believe what happened", "This was totally unexpected", "I'm surprised", "that blew my mind", "I'm astonished", "I'm amazed", "wow", "unbelievable" ],
+    "answer": "Life can be full of surprises. Sometimes it brings growth - let's see the good side of it."
+  },
+  "yes": {
+    "question": ["yes", "yeah", "yep", "sure", "of course", "ok", "okay"],
+    "answer": "Great! Let's continue."
+  },
+  "no": {
+    "question": ["no", "nope", "nah", "not really"],
+    "answer": "Okay, no problem. What else can I do for you?"
+  },
+  "maybe": {
+    "question": ["maybe", "not sure", "possibly", "could be"],
+    "answer": "Take your time, I'm here whenever you decide."
+  },
+
+  "project_name": {
+    "question": ["what is Aina", "tell me about Aina"],
+    "answer": "Aina is a mood and voice assistant that interacts via text or speech and responds based on your mood."
+  },
+  "target_audience": {
+    "question": ["who is the target audience", "who can use it"],
+    "answer": "Aina is designed for anyone interested in mood tracking, productivity, or guided relaxation."
+  },
+  "project_name_meaning": {
+    "question": ["why the name Aina", "meaning of Aina"],
+    "answer": "The name 'Aina' is inspired by the idea of a friendly companion reflecting your mood."
+  },
+  "inspiration": {
+    "question": ["what inspired you to create it", "why did you make it"],
+    "answer": "I wanted an assistant that understands emotions and supports mental well-being."
+  },
+  "development_time": {
+    "question": ["how long did development take", "time taken to develop"],
+    "answer": "It took several weeks including coding, testing, and debugging."
+  },
+  "project_type": {
+    "question": ["is it a personal or commercial project", "project type"],
+    "answer": "Currently personal, but it has potential for commercial applications."
+  },
+  "problem_solved": {
+    "question": ["what problem does it solve", "purpose of the project"],
+    "answer": "It helps users manage mood, get suggestions, and improve productivity or relaxation."
+  },
+  "accessibility": {
+    "question": ["is it accessible for beginners", "easy to use?"],
+    "answer": "Yes, it has a simple interface for users of all ages."
+  },
+  "multi_user": {
+    "question": ["can it work for multiple users", "multiple user support"],
+    "answer": "Currently designed for single sessions, multi-user support is planned."
+  },
+  "data_privacy": {
+    "question": ["does it store personal data", "privacy concern"],
+    "answer": "No, all data is processed in real-time without storing personal information."
+  },
+  "main_features": {
+    "question": ["what are its main features", "features of Aina"],
+    "answer": "Text, voice, continuous listening, mood detection, and activity suggestions."
+  },
+  "mood_detection": {
+    "question": ["can it detect multiple moods", "mood detection"],
+    "answer": "Yes, it can detect basic moods like happy, sad, stressed, or neutral."
+  },
+  "activity_suggestion": {
+    "question": ["how does it suggest activities", "suggest activities?"],
+    "answer": "Based on the detected mood, it offers exercises, meditation, or fun activities."
+  },
+  "casual_responses": {
+    "question": ["can it tell jokes or casual responses", "funny replies?"],
+    "answer": "Yes, it has pre-defined humorous and casual responses."
+  },
+  "human_like_response": {
+    "question": ["does it respond like a human", "natural response?"],
+    "answer": "It responds naturally, but with AI-defined limitations."
+  },
+  "play_music": {
+    "question": ["can it play music", "music playback?"],
+    "answer": "It can suggest or link music; full playback integration is planned."
+  },
+  "app_interaction": {
+    "question": ["can it interact with apps", "connect to apps?"],
+    "answer": "Currently standalone, but future integrations with APIs like Spotify are planned."
+  },
+  "accent_support": {
+    "question": ["can it understand accents", "different accents?"],
+    "answer": "Basic accents work well; extreme variations may reduce accuracy."
+  },
+  "learn_preferences": {
+    "question": ["can it learn user preferences", "personalization?"],
+    "answer": "Currently, it doesn’t learn long-term, but session-based learning is possible."
+  },
+  "customizable": {
+    "question": ["is it customizable", "can I customize it?"],
+    "answer": "Users can change modes, responses, and add new commands."
+  },
+  "languages_used": {
+    "question": ["which languages are used", "programming languages?"],
+    "answer": "Frontend: HTML, CSS, JavaScript; Backend: Python, FastAPI."
+  },
+  "libraries_used": {
+    "question": ["which libraries are used", "dependencies?"],
+    "answer": "FuzzyWuzzy for text matching, Web Speech API for TTS and recognition."
+  },
+  "mood_detection_tech": {
+    "question": ["how is mood detected", "mood analysis?"],
+    "answer": "It combines voice tone analysis and text keywords to classify emotions."
+  },
+  "error_handling": {
+    "question": ["can it handle errors", "error handling?"],
+    "answer": "Yes, it provides fallback responses for unclear inputs."
+  },
+  "offline_support": {
+    "question": ["can it run offline", "offline functionality?"],
+    "answer": "Core functions work offline; some API-dependent features require internet."
+  },
+  "scalability": {
+    "question": ["how scalable is it", "can it handle many requests?"],
+    "answer": "Backend supports multiple requests, and features are modular."
+  },
+  "challenges": {
+    "question": ["what challenges were faced", "difficulties encountered?"],
+    "answer": "Accurate mood detection and smooth real-time voice interaction were the main challenges."
+  },
+  "latency": {
+    "question": ["how is latency handled", "response speed?"],
+    "answer": "Optimized backend with asynchronous processing for minimal delays."
+  },
+  "security": {
+    "question": ["how secure is it", "security measures?"],
+    "answer": "No personal data is stored; communications are secure within session."
+  },
+  "future_AI": {
+    "question": ["can it integrate AI in the future", "AI integration?"],
+    "answer": "Advanced NLP can be added in the future for smarter responses."
+  },
+  "demo": {
+    "question": ["can you show it working", "demo please"],
+    "answer": "Yes, you can try text, voice, or continuous listening modes."
+  },
+  "fallback_response": {
+    "question": ["what if it doesn’t understand a command", "unknown input?"],
+    "answer": "It politely asks for clarification or gives a default helpful response."
+  },
+  "real_time": {
+    "question": ["does it respond in real-time", "instant response?"],
+    "answer": "Yes, responses are generated in real-time for smooth interaction."
+  },
+  "casual_question": {
+    "question": ["can it answer casual questions", "chat casually?"],
+    "answer": "Yes, it has pre-defined casual responses and humor."
+  },
+  "stress_exercise": {
+    "question": ["can it suggest exercises for stress", "stress relief suggestions?"],
+    "answer": "Yes, it suggests meditation, breathing exercises, or mindful activities."
+  },
+  "accuracy": {
+    "question": ["how accurate is mood detection", "detection accuracy?"],
+    "answer": "Basic moods are accurately detected most of the time."
+  },
+  "multi_question": {
+    "question": ["can it handle multiple questions at once", "multiple queries?"],
+    "answer": "Currently it handles one question at a time for clarity."
+  },
+  "stop_feature": {
+    "question": ["can it stop if user wants", "stop interaction?"],
+    "answer": "Yes, a stop button or hide assistant feature interrupts responses."
+  },
+  "continuous_mode": {
+    "question": ["can it respond continuously without typing", "continuous mode?"],
+    "answer": "Yes, continuous voice mode handles ongoing interaction."
+  },
+  "multi_language": {
+    "question": ["does it support multiple languages", "language support?"],
+    "answer": "Currently supports English; other languages can be added later."
+  },
+  "future_plans": {
+    "question": ["what are your future plans", "next steps?"],
+    "answer": "Improving accuracy, adding multi-language support, app integration, and AI conversational features."
+  },
+  "commercial_potential": {
+    "question": ["can it become commercial", "monetization?"],
+    "answer": "Yes, premium features or subscription models are possible."
+  },
+  "IoT_integration": {
+    "question": ["can it integrate IoT devices", "smart home integration?"],
+    "answer": "Future versions may control smart home devices based on mood."
+  },
+  "notifications": {
+    "question": ["can it provide notifications or reminders", "reminders?"],
+    "answer": "Planned for future integration with calendar APIs."
+  },
+  "personalization": {
+    "question": ["can it personalize responses long-term", "long-term learning?"],
+    "answer": "Session-based personalization can evolve into long-term learning."
+  },
+  "school_office_use": {
+    "question": ["can it be used in schools or offices", "institutional use?"], 
+    "answer": "Yes, it can improve productivity and mental well-being in structured environments."
+  },
+  "AI_improvement": {
+    "question": ["how will AI improve it", "AI future?"],
+    "answer": "Advanced NLP will allow human-like conversations and better mood understanding."
+  },
+  "limitations": {
+    "question": ["what are limitations now", "current limits?"],
+    "answer": "Limited moods, single-user sessions, and dependent on internet for some features."
+  },
+  "comparison": {
+    "question": ["how does it compare to Alexa or Siri", "compare with Alexa/Siri?"],
+    "answer": "Focused on mood detection and emotional guidance rather than full device control."
+  },
+  "achievement": {
+    "question": ["what is the biggest achievement in this project", "main success?"],
+    "answer": "Creating a responsive voice assistant that understands mood and interacts naturally."
   }
 }
