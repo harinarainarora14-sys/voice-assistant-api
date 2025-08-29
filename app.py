@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from datetime import datetime
-from zoneinfo import ZoneInfo  # Built-in
+from zoneinfo import ZoneInfo
 from fuzzywuzzy import fuzz
 import requests
 from urllib.parse import quote
@@ -44,17 +44,35 @@ def ping():
     return {"message": "pong"}
 
 # ------------------------
+# Gemini API helper
+# ------------------------
+GEMINI_API_KEY = "AIzaSyB4oYXN34edV8imQd7A_pYxuSSm9Hl5sso"
+GEMINI_API_URL = "https://api.gemini.ai/v1/chat"  # Example Gemini endpoint
+
+def ask_gemini(question: str):
+    try:
+        headers = {"Authorization": f"Bearer {GEMINI_API_KEY}"}
+        payload = {"prompt": question, "model": "gemini-1"}
+        resp = requests.post(GEMINI_API_URL, json=payload, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("answer") or data.get("text") or "No answer from Gemini."
+        else:
+            return "Gemini API error."
+    except Exception as e:
+        return f"Gemini API exception: {str(e)}"
+
+# ------------------------
 # Main ask endpoint
 # ------------------------
 @app.get("/ask")
 def ask(question: str = Query(...)):
-    question = question.lower().strip()
-    question = question.rstrip(string.punctuation + "!?")
+    question_clean = question.lower().strip().rstrip(string.punctuation + "!?")
 
     # --- Step 1: Exact match ---
     for intent, data in responses.items():
         for q in data.get("question", []):
-            if question == q.lower().strip():
+            if question_clean == q.lower().strip():
                 return process_answer(intent, question)
 
     # --- Step 2: Fuzzy match ---
@@ -62,7 +80,7 @@ def ask(question: str = Query(...)):
     best_score = 0
     for intent, data in responses.items():
         for q in data.get("question", []):
-            score = fuzz.ratio(question, q.lower())
+            score = fuzz.ratio(question_clean, q.lower())
             if score > best_score:
                 best_score = score
                 best_match = intent
@@ -71,7 +89,7 @@ def ask(question: str = Query(...)):
         return process_answer(best_match, question)
 
     # --- Step 3: Wikipedia fallback ---
-    if len(question.split()) >= 3:
+    if len(question_clean.split()) >= 3:
         wiki_keywords = [
             "tell me about", "who is", "what is", "search for",
             "give me information on", "explain", "tell me something about", "find info about"
@@ -98,8 +116,9 @@ def ask(question: str = Query(...)):
         except requests.exceptions.RequestException:
             return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
-    # --- Step 4: No match ---
-    return {"answer": f"Sorry, I don't understand '{question}'."}
+    # --- Step 4: Fallback to Gemini ---
+    gemini_answer = ask_gemini(question)
+    return {"answer": gemini_answer}
 
 # ------------------------
 # Answer processing
@@ -107,7 +126,7 @@ def ask(question: str = Query(...)):
 def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time request → Indian local time 12-hour format
+    # Time request → Indian local time
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
         now_india = datetime.now(india_tz)
@@ -145,5 +164,4 @@ def process_answer(intent: str, question: str):
     # Default static response
     else:
         return {"answer": answer}
-
 
