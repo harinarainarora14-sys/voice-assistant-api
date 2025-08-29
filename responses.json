@@ -1,15 +1,18 @@
 {
   "greeting": {
-    "question": ["hello","hi","hey"],
+    "question": ["hello", "hi", "hey", "good morning", "good afternoon", "good evening"],
     "answer": "Hello! How can I help you today?"
   },
-  "time": {
-    "question": ["what time is it","current time"],
+  "goodbye": {
+    "question": ["bye", "goodbye", "see you", "talk later"],
+    "answer": "Goodbye! Have a great day!"
+  },
+  "time_request": {
+    "question": ["what time is it", "tell me the time", "current time"],
     "answer": "TIME"
   },
-  "wikipedia": {
-    "question": ["who is albert einstein","tell me about python programming"],
+  "wiki_request": {
+    "question": ["tell me about", "who is", "what is", "explain", "give me information on"],
     "answer": "WIKIPEDIA"
   }
 }
-
