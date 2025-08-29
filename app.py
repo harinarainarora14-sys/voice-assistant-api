@@ -1,15 +1,15 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import json
-import requests
-from fuzzywuzzy import fuzz
-from urllib.parse import quote
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo  # Built-in
+from fuzzywuzzy import fuzz
+import requests
+from urllib.parse import quote
 import string
 
 # ------------------------
-# Load responses.json
+# Load responses
 # ------------------------
 try:
     with open("responses.json", "r") as f:
@@ -19,16 +19,11 @@ except Exception as e:
     responses = {}
 
 # ------------------------
-# Gemini API Key
-# ------------------------
-GEMINI_KEY = "AIzaSyB4oYXN34edV8imQd7A_pYxuSSm9Hl5sso"
-GEMINI_URL = "https://api.generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText"
-
-# ------------------------
 # Initialize FastAPI
 # ------------------------
 app = FastAPI()
 
+# CORS middleware to allow frontend access globally
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,7 +33,7 @@ app.add_middleware(
 )
 
 # ------------------------
-# Home & ping
+# Home & ping routes
 # ------------------------
 @app.get("/")
 def home():
@@ -49,79 +44,105 @@ def ping():
     return {"message": "pong"}
 
 # ------------------------
-# Ask endpoint
+# Main ask endpoint
 # ------------------------
 @app.get("/ask")
-def ask(question: str = Query(...), use_gemini: bool = Query(False)):
-    question_clean = question.lower().strip().rstrip(string.punctuation + "!?")
+def ask(question: str = Query(...)):
+    question = question.lower().strip()
+    question = question.rstrip(string.punctuation + "!?")
 
     # --- Step 1: Exact match ---
     for intent, data in responses.items():
         for q in data.get("question", []):
-            if question_clean == q.lower().strip():
-                return process_answer(intent, question_clean, use_gemini)
+            if question == q.lower().strip():
+                return process_answer(intent, question)
 
     # --- Step 2: Fuzzy match ---
     best_match = None
     best_score = 0
     for intent, data in responses.items():
         for q in data.get("question", []):
-            score = fuzz.ratio(question_clean, q.lower())
+            score = fuzz.ratio(question, q.lower())
             if score > best_score:
                 best_score = score
                 best_match = intent
 
     if best_match and best_score >= 85:
-        return process_answer(best_match, question_clean, use_gemini)
+        return process_answer(best_match, question)
 
-    # --- Step 3: Gemini fallback ---
-    if use_gemini or len(question.split()) >= 3:
+    # --- Step 3: Wikipedia fallback ---
+    if len(question.split()) >= 3:
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
+
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
-            resp = requests.post(
-                GEMINI_URL,
-                headers={"Authorization": f"Bearer {GEMINI_KEY}"},
-                json={"prompt": {"text": question}, "temperature": 0.5, "maxOutputTokens": 300}
-            )
+            resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                text = data.get("candidates", [{}])[0].get("content", "")
-                if text:
-                    return {"answer": text}
-            return {"answer": "Gemini API did not return a valid response."}
-        except Exception as e:
-            return {"answer": f"Gemini API error: {e}"}
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
+        except requests.exceptions.RequestException:
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
     # --- Step 4: No match ---
     return {"answer": f"Sorry, I don't understand '{question}'."}
 
-
 # ------------------------
-# Process static responses
+# Answer processing
 # ------------------------
-def process_answer(intent: str, question: str, use_gemini=False):
+def process_answer(intent: str, question: str):
     answer = responses[intent].get("answer", "Sorry, I don't understand that.")
 
-    # Time
+    # Time request → Indian local time 12-hour format
     if answer.upper() == "TIME":
         india_tz = ZoneInfo("Asia/Kolkata")
-        now = datetime.now(india_tz)
-        return {"answer": now.strftime("%I:%M %p"), "type": "time_india"}
+        now_india = datetime.now(india_tz)
+        time_str = now_india.strftime("%I:%M %p")
+        return {"answer": time_str, "type": "time_india"}
 
-    # Gemini override
-    if use_gemini:
+    # Wikipedia request
+    elif answer.upper() == "WIKIPEDIA":
+        wiki_keywords = [
+            "tell me about", "who is", "what is", "search for",
+            "give me information on", "explain", "tell me something about", "find info about"
+        ]
+        query = question
+        for kw in wiki_keywords:
+            if question.startswith(kw):
+                query = question[len(kw):].strip()
+                break
+
+        url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(query)
+        headers = {"User-Agent": "VoiceAssistant/1.0 (https://yourdomain.com, contact: your@email.com)"}
         try:
-            resp = requests.post(
-                GEMINI_URL,
-                headers={"Authorization": f"Bearer {GEMINI_KEY}"},
-                json={"prompt": {"text": question}, "temperature": 0.5, "maxOutputTokens": 300}
-            )
+            resp = requests.get(url, headers=headers, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                text = data.get("candidates", [{}])[0].get("content", "")
-                if text:
-                    return {"answer": text}
-        except Exception as e:
-            return {"answer": f"Gemini API error: {e}"}
+                extract = data.get("extract", "")
+                if extract:
+                    return {"answer": extract}
+                else:
+                    return {"answer": "I couldn't find anything on Wikipedia."}
+            else:
+                return {"answer": "I couldn't find anything on Wikipedia."}
+        except requests.exceptions.RequestException:
+            return {"answer": "Sorry, there was an error accessing Wikipedia."}
 
     # Default static response
-    return {"answer": answer}
+    else:
+        return {"answer": answer}
+
